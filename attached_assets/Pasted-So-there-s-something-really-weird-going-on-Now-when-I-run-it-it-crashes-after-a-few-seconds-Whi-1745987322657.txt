@@ -1,0 +1,107 @@
+So, there's something really weird going on. Now, when I run it, it crashes after a few seconds. Which obviously isn't good. Even when it is running, it says all active orders, like, none. And, um, it has the, which is strange, the bay ticket thing, is working, still. But, yeah, the rest is just fucking broken.Starting kitchen timer background tasks...
+4:27:08 AM [express] serving on port 5000
+Starting kitchen timer background tasks...
+Running synchronizeBayStatus job...
+Found 5 bays with active orders: [ 5, 6, 14, 24, 27 ]
+Bay 5 has 2 active items with statuses: [ 'PLATING', 'COOKING' ]
+Setting bay 5 status to: cooking
+Successfully updated bay 5 status to cooking
+Bay 6 has 2 active items with statuses: [ 'READY', 'READY' ]
+Setting bay 6 status to: ready
+Successfully updated bay 6 status to ready
+Bay 14 has 2 active items with statuses: [ 'READY', 'READY' ]
+Setting bay 14 status to: ready
+Successfully updated bay 14 status to ready
+Bay 24 has 1 active items with statuses: [ 'READY' ]
+Setting bay 24 status to: ready
+Successfully updated bay 24 status to ready
+Bay 27 has 2 active items with statuses: [ 'COOKING', 'NEW' ]
+Setting bay 27 status to: cooking
+Successfully updated bay 27 status to cooking
+Running synchronizeBayStatus job...
+Found 5 bays with active orders: [ 5, 6, 14, 24, 27 ]
+Bay 5 has 2 active items with statuses: [ 'PLATING', 'COOKING' ]
+Setting bay 5 status to: cooking
+Successfully updated bay 5 status to cooking
+Bay 6 has 2 active items with statuses: [ 'READY', 'READY' ]
+Setting bay 6 status to: ready
+Successfully updated bay 6 status to ready
+Bay 14 has 2 active items with statuses: [ 'READY', 'READY' ]
+Setting bay 14 status to: ready
+Successfully updated bay 14 status to ready
+Bay 24 has 1 active items with statuses: [ 'READY' ]
+Setting bay 24 status to: ready
+Successfully updated bay 24 status to ready
+Bay 27 has 2 active items with statuses: [ 'COOKING', 'NEW' ]
+Setting bay 27 status to: cooking
+Successfully updated bay 27 status to cooking
+Running synchronizeBayStatus job...
+Found 5 bays with active orders: [ 5, 6, 14, 24, 27 ]
+Bay 5 has 2 active items with statuses: [ 'PLATING', 'COOKING' ]
+Setting bay 5 status to: cooking
+Successfully updated bay 5 status to cooking
+Bay 6 has 2 active items with statuses: [ 'READY', 'READY' ]
+Setting bay 6 status to: ready
+Successfully updated bay 6 status to ready
+Bay 14 has 2 active items with statuses: [ 'READY', 'READY' ]
+Setting bay 14 status to: ready
+Successfully updated bay 14 status to ready
+Bay 24 has 1 active items with statuses: [ 'READY' ]
+Setting bay 24 status to: ready
+Successfully updated bay 24 status to ready
+Bay 27 has 2 active items with statuses: [ 'COOKING', 'NEW' ]
+Setting bay 27 status to: cooking
+Successfully updated bay 27 status to cooking
+Browserslist: browsers data (caniuse-lite) is 6 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Running synchronizeBayStatus job...
+Found 5 bays with active orders: [ 5, 6, 14, 24, 27 ]
+Bay 5 has 2 active items with statuses: [ 'PLATING', 'COOKING' ]
+Setting bay 5 status to: cooking
+Successfully updated bay 5 status to cooking
+Bay 6 has 2 active items with statuses: [ 'READY', 'READY' ]
+Setting bay 6 status to: ready
+Successfully updated bay 6 status to ready
+Bay 14 has 2 active items with statuses: [ 'READY', 'READY' ]
+Setting bay 14 status to: ready
+Successfully updated bay 14 status to ready
+Bay 24 has 1 active items with statuses: [ 'READY' ]
+Setting bay 24 status to: ready
+Client sfxf90j5bpf registered as undefined
+Successfully updated bay 24 status to ready
+4:27:20 AM [express] GET /api/orders 500 in 231ms :: {"message":"Failed to fetch orders"}
+Bay 27 has 2 active items with statuses: [ 'COOKING', 'NEW' ]
+Setting bay 27 status to: cooking
+Successfully updated bay 27 status to cooking
+file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345
+o?t(o):n(u)},"cb"),s=new r(function(o,u){n=o,t=u}).catch(o=>{throw Error.captureStackTrace(
+                                                                         ^
+
+error: column "attention_threshold" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.getActiveOrders (/home/runner/workspace/server/storage.ts:351:35) {
+  length: 119,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '29',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3722',
+  routine: 'errorMissingColumn'
+}
+
+Node.js v20.18.1
+
+
