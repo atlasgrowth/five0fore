@@ -1,0 +1,71 @@
+# ───── BAY STATUS RECALC ─────
+# Files: server/storage.ts, client/components/server/BaySelection.tsx
+#
+# 1. storage.ts  add helper
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: server/storage.ts
+@@
+ const storage = {
++  async recalcBayStatus(bayId:string){
++    const rows = await db.select({ status: orderItems.status })
++       .from(orderItems)
++       .leftJoin(orders, eq(orders.id, orderItems.orderId))
++       .where(and(eq(orders.bayId, bayId),
++                  notInArray(orders.status, ["CLOSED","CANCELLED"])));
++
++    const s = rows.map(r=>r.status);
++    let bayStatus:"AVAILABLE"|"NEW"|"COOKING"|"PLATING"|"READY"="AVAILABLE";
++    if(s.includes("NEW"))           bayStatus="NEW";
++    else if(s.includes("COOKING"))  bayStatus="COOKING";
++    else if(s.includes("PLATING"))  bayStatus="PLATING";
++    else if(s.length && s.every(x=>x==="READY")) bayStatus="READY";
++
++    await db.update(bays).set({status:bayStatus}).where(eq(bays.id,bayId));
++    const bay = await db.query.bays.findFirst({ where:eq(bays.id,bayId) });
++    broadcast("bay_updated",{bay:toBayDTO(bay)});
++  },
+*** End Patch
+PATCH
+# call helper inside markFired / markReady / markServed
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: server/storage.ts
+@@
+   async markFired(id:string){ …existing… 
+-    return item;
++    await this.recalcBayStatus(item.bayId);
++    return item;
+   },
+   async markReady(id:string){ …existing…
+-    return item;
++    await this.recalcBayStatus(item.bayId);
++    return item;
+   },
+   async markOrderServed(orderId:string){ …existing…
+-    return ord;
++    await this.recalcBayStatus(ord.bayId);
++    return ord;
+   },
+*** End Patch
+PATCH
+#
+# 2. BaySelection colour map
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: client/src/components/server/BaySelection.tsx
+@@
+-const colour = status==="NEW" ? "bg-blue-100"
+-             : "bg-gray-100";
++const colour = status==="NEW"      ? "bg-blue-100"
++             : status==="COOKING"  ? "bg-yellow-200"
++             : status==="PLATING"  ? "bg-purple-200"
++             : status==="READY"    ? "bg-green-200"
++             : "bg-gray-100";
+*** End Patch
+PATCH
+#
+pnpm dlx tsc --noEmit
+git add -A
+git commit -m "feat(bay): live colour based on aggregate status"
+git push
