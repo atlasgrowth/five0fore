@@ -265,13 +265,8 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
         description: "Order item status has been updated.",
       });
       
-      // After data refreshes, find and scroll to the element again
-      setTimeout(() => {
-        const element = document.querySelector(`[data-item-id="${orderItemId}"]`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      }, 400);
+      // Removed auto-scrolling to prevent UI jumps
+      // We'll let the user control scrolling manually
       
     } catch (error) {
       toast({
@@ -357,15 +352,8 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
     }
   });
   
-  // Focus on the last processed item when data refreshes
-  useEffect(() => {
-    if (lastProcessedItem) {
-      const element = document.querySelector(`[data-item-id="${lastProcessedItem}"]`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
-    }
-  }, [orders, lastProcessedItem]);
+  // Removed auto-focusing/scrolling on last processed item
+  // to prevent unwanted UI jumps when updating items
   
   return (
     <div className="relative">
@@ -404,23 +392,23 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
         className="space-y-6 overflow-auto pb-6 pt-2"
       >
         {/* NEW & COOKING row (top) - horizontal scrollable row */}
-        <div className="space-y-4">
-          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-primary border-l-4 border-blue-500 flex items-center">
+        <div className="space-y-2">
+          <h2 className="font-bold text-md bg-white p-1 rounded-md shadow-sm text-primary border-l-4 border-blue-500 flex items-center sticky left-0">
             <span>New & Cooking ({ordersByStatus.new.length + ordersByStatus.cooking.length})</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-2 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           </h2>
           
           {ordersByStatus.new.length === 0 && ordersByStatus.cooking.length === 0 ? (
-            <div className="bg-white p-4 rounded-md text-center text-gray-500 border">
+            <div className="bg-white p-2 rounded-md text-center text-gray-500 border">
               No new or cooking orders
             </div>
           ) : (
-            <div className="flex space-x-4 overflow-x-auto pb-4">
+            <div className="flex space-x-2 overflow-x-auto pb-2">
               {/* NEW orders first */}
               {ordersByStatus.new.map((order) => (
-                <div key={order.id} className="min-w-[300px] flex-shrink-0">
+                <div key={order.id} className="min-w-[220px] max-w-[220px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -432,7 +420,7 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
               
               {/* Then COOKING orders */}
               {ordersByStatus.cooking.map((order) => (
-                <div key={order.id} className="min-w-[300px] flex-shrink-0">
+                <div key={order.id} className="min-w-[220px] max-w-[220px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -446,22 +434,22 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
         </div>
         
         {/* PLATING row (second) - horizontal scrollable row */}
-        <div className="space-y-4">
-          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-purple-700 border-l-4 border-purple-500 flex items-center">
+        <div className="space-y-2">
+          <h2 className="font-bold text-md bg-white p-1 rounded-md shadow-sm text-purple-700 border-l-4 border-purple-500 flex items-center sticky left-0">
             <span>Plating ({ordersByStatus.plating.length})</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-2 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           </h2>
           
           {ordersByStatus.plating.length === 0 ? (
-            <div className="bg-white p-4 rounded-md text-center text-gray-500 border">
+            <div className="bg-white p-2 rounded-md text-center text-gray-500 border">
               No orders being plated
             </div>
           ) : (
-            <div className="flex space-x-4 overflow-x-auto pb-4">
+            <div className="flex space-x-2 overflow-x-auto pb-2">
               {ordersByStatus.plating.map((order) => (
-                <div key={order.id} className="min-w-[300px] flex-shrink-0">
+                <div key={order.id} className="min-w-[220px] max-w-[220px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -475,22 +463,22 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
         </div>
         
         {/* READY row (third) - horizontal scrollable row */}
-        <div className="space-y-4">
-          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-green-700 border-l-4 border-green-500 flex items-center">
+        <div className="space-y-2">
+          <h2 className="font-bold text-md bg-white p-1 rounded-md shadow-sm text-green-700 border-l-4 border-green-500 flex items-center sticky left-0">
             <span>Ready ({ordersByStatus.ready.length})</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-2 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           </h2>
           
           {ordersByStatus.ready.length === 0 ? (
-            <div className="bg-white p-4 rounded-md text-center text-gray-500 border">
+            <div className="bg-white p-2 rounded-md text-center text-gray-500 border">
               No orders ready to serve
             </div>
           ) : (
-            <div className="flex space-x-4 overflow-x-auto pb-4">
+            <div className="flex space-x-2 overflow-x-auto pb-2">
               {ordersByStatus.ready.map((order) => (
-                <div key={order.id} className="min-w-[300px] flex-shrink-0">
+                <div key={order.id} className="min-w-[220px] max-w-[220px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -504,22 +492,22 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
         </div>
         
         {/* SERVED row (fourth) - horizontal scrollable row */}
-        <div className="space-y-4">
-          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-blue-700 border-l-4 border-blue-400 flex items-center">
+        <div className="space-y-2">
+          <h2 className="font-bold text-md bg-white p-1 rounded-md shadow-sm text-blue-700 border-l-4 border-blue-400 flex items-center sticky left-0">
             <span>Served ({ordersByStatus.served.length})</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-2 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           </h2>
           
           {ordersByStatus.served.length === 0 ? (
-            <div className="bg-white p-4 rounded-md text-center text-gray-500 border">
+            <div className="bg-white p-2 rounded-md text-center text-gray-500 border">
               No served orders
             </div>
           ) : (
-            <div className="flex space-x-4 overflow-x-auto pb-4">
+            <div className="flex space-x-2 overflow-x-auto pb-2">
               {ordersByStatus.served.map((order) => (
-                <div key={order.id} className="min-w-[300px] flex-shrink-0">
+                <div key={order.id} className="min-w-[220px] max-w-[220px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -533,22 +521,22 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
         </div>
         
         {/* CLOSED row (bottom) - horizontal scrollable row */}
-        <div className="space-y-4">
-          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-gray-700 border-l-4 border-gray-500 flex items-center">
+        <div className="space-y-2">
+          <h2 className="font-bold text-md bg-white p-1 rounded-md shadow-sm text-gray-700 border-l-4 border-gray-500 flex items-center sticky left-0">
             <span>Closed ({ordersByStatus.closed.length})</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-2 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           </h2>
           
           {ordersByStatus.closed.length === 0 ? (
-            <div className="bg-white p-4 rounded-md text-center text-gray-500 border">
+            <div className="bg-white p-2 rounded-md text-center text-gray-500 border">
               No closed orders
             </div>
           ) : (
-            <div className="flex space-x-4 overflow-x-auto pb-4">
+            <div className="flex space-x-2 overflow-x-auto pb-2">
               {ordersByStatus.closed.map((order) => (
-                <div key={order.id} className="min-w-[300px] flex-shrink-0">
+                <div key={order.id} className="min-w-[220px] max-w-[220px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -627,13 +615,13 @@ function OrderCard({
         getBorderColor()
       )}
     >
-      <div className="p-4">
+      <div className="p-2">
         {/* TOP ROW: Status on left, Bay number in center, Order number on right */}
-        <div className="flex justify-between items-center mb-3 border-b pb-2">
+        <div className="flex justify-between items-center mb-1 border-b pb-1">
           {/* Left: Status */}
           <div>
             <span className={cn(
-              "text-sm font-medium uppercase tracking-wider px-2 py-1 rounded",
+              "text-xs font-medium uppercase tracking-wider px-1 py-0.5 rounded",
               order.status === OrderStatus.READY ? "text-green-700 bg-green-50 border border-green-200" : 
               order.status === OrderStatus.PLATING ? "text-purple-700 bg-purple-50 border border-purple-200" :
               order.status === OrderStatus.COOKING ? "text-yellow-700 bg-yellow-50 border border-yellow-200" :
@@ -648,22 +636,22 @@ function OrderCard({
           
           {/* Middle: Bay information */}
           <div className="text-center">
-            <h3 className="font-bold text-lg">Bay {order.bayNumber}</h3>
+            <h3 className="font-bold text-md">Bay {order.bayNumber}</h3>
           </div>
           
           {/* Right: Order number */}
           <div className="text-right">
-            <span className="text-sm font-medium text-neutral-600 bg-neutral-100 px-2 py-1 rounded-md">
+            <span className="text-xs font-medium text-neutral-600 bg-neutral-100 px-1 py-0.5 rounded">
               #{order.orderNumber}
             </span>
           </div>
         </div>
         
         {/* ITEMS SECTION */}
-        <div className="mb-4">
+        <div className="mb-1">
           {isLoading ? (
-            <div className="p-2 flex items-center justify-center">
-              <svg className="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <div className="p-1 flex items-center justify-center">
+              <svg className="animate-spin h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
@@ -703,7 +691,7 @@ function OrderCard({
                   key={item.id}
                   data-item-id={item.id}
                   className={cn(
-                    "flex justify-between p-2 mb-2 border-b",
+                    "flex justify-between p-1 mb-1 border-b text-xs",
                     item.status === OrderItemStatus.COOKING && "border-l-2 border-l-yellow-500",
                     item.status === OrderItemStatus.PLATING && "border-l-2 border-l-purple-500",
                     item.status === OrderItemStatus.READY && "border-l-2 border-l-green-500",
@@ -712,7 +700,7 @@ function OrderCard({
                 >
                   <div className="flex items-center">
                     <Checkbox 
-                      className="h-4 w-4 rounded mr-2 border border-neutral-300"
+                      className="h-3 w-3 rounded mr-1 border border-neutral-300"
                       checked={
                         item.status === OrderItemStatus.COOKING || 
                         item.status === OrderItemStatus.PLATING || 
@@ -726,7 +714,7 @@ function OrderCard({
                     <div className="flex flex-col">
                       <div className="flex items-center">
                         <div className="flex items-center">
-                          <span className="text-sm font-medium">{item.quantity}x {item.menuItem?.name}</span>
+                          <span className="text-xs font-medium">{item.quantity}x {item.menuItem?.name}</span>
                           <span className="ml-1 text-xs text-gray-500">
                             ({Math.round((item.cookSeconds || item.menuItem?.prep_seconds || 0) / 60)}m)
                           </span>
@@ -734,8 +722,8 @@ function OrderCard({
                         
                         {/* Status labels with appropriate indicators and action buttons */}
                         {item.status === OrderItemStatus.COOKING && item.firedAt && (
-                          <div className="ml-2 flex items-center">
-                            <span className="text-xs font-medium bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">
+                          <div className="ml-1 flex items-center">
+                            <span className="text-xs font-medium bg-yellow-100 text-yellow-800 px-1 py-0.5 rounded-full">
                               Cooking
                             </span>
                             <CookingTimer 
@@ -744,10 +732,10 @@ function OrderCard({
                             />
                             <button 
                               onClick={() => toggleItemCompletion(item.id, true, item.status)}
-                              className="ml-2 p-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-full flex items-center"
+                              className="ml-1 p-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-full flex items-center"
                               title="Move to plating"
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
                             </button>
@@ -755,16 +743,16 @@ function OrderCard({
                         )}
                         
                         {item.status === OrderItemStatus.PLATING && (
-                          <div className="ml-2 flex items-center">
-                            <span className="text-xs font-medium bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">
+                          <div className="ml-1 flex items-center">
+                            <span className="text-xs font-medium bg-purple-100 text-purple-800 px-1 py-0.5 rounded-full">
                               Plating
                             </span>
                             <button 
                               onClick={() => toggleItemCompletion(item.id, true, item.status)}
-                              className="ml-2 p-1 text-xs bg-green-100 hover:bg-green-200 text-green-800 rounded-full flex items-center"
+                              className="ml-1 p-1 text-xs bg-green-100 hover:bg-green-200 text-green-800 rounded-full flex items-center"
                               title="Mark as ready"
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
                             </button>
@@ -772,16 +760,16 @@ function OrderCard({
                         )}
                         
                         {item.status === OrderItemStatus.READY && (
-                          <div className="ml-2 flex items-center">
-                            <span className="text-xs font-medium bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                          <div className="ml-1 flex items-center">
+                            <span className="text-xs font-medium bg-green-100 text-green-800 px-1 py-0.5 rounded-full">
                               Ready
                             </span>
                             <button 
                               onClick={() => toggleItemCompletion(item.id, true, item.status)}
-                              className="ml-2 p-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-full flex items-center"
+                              className="ml-1 p-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-full flex items-center"
                               title="Mark as delivered"
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
                             </button>
@@ -789,7 +777,7 @@ function OrderCard({
                         )}
                         
                         {item.status === OrderItemStatus.DELIVERED && (
-                          <span className="ml-2 text-xs font-medium bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                          <span className="ml-1 text-xs font-medium bg-blue-100 text-blue-800 px-1 py-0.5 rounded-full">
                             Delivered
                           </span>
                         )}
@@ -810,14 +798,13 @@ function OrderCard({
                         )}
                       </div>
                       
-                      {/* Customizations display */}
+                      {/* Customizations display - even more compact */}
                       {item.customizations && item.customizations.length > 0 && (
-                        <div className="mt-0.5 text-xs text-neutral-500">
+                        <div className="text-xs text-neutral-500">
                           {item.customizations.map((customization, idx) => (
-                            <div key={idx}>
-                              <span className="font-medium">{customization.categoryName}: </span>
+                            <span key={idx} className="mr-1">
                               {customization.options.map(opt => opt.name).join(', ')}
-                            </div>
+                            </span>
                           ))}
                         </div>
                       )}
@@ -826,29 +813,28 @@ function OrderCard({
                 </div>
               ))
           ) : (
-            <div className="p-2 text-neutral-500 text-sm text-center">
+            <div className="p-1 text-neutral-500 text-xs text-center">
               No items in this order
             </div>
           )}
         </div>
         
-        {/* BOTTOM ROW: Placed time and Estimated Completion + Time status */}
-        <div className="flex justify-between items-center text-sm pt-1 border-t mt-2">
-          {/* Left: Placed time */}
-          <div className="flex flex-col">
-            <span className="text-xs text-neutral-500">Placed</span>
-            <span className="font-medium">
-              {new Date(order.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
-            </span>
-          </div>
-          
-          {/* Right: Estimated completion and status */}
-          <div className="flex flex-col items-end">
-            {/* Estimated completion time */}
+        {/* BOTTOM ROW with times and actions combined for compactness */}
+        <div className="flex justify-between items-center border-t pt-1 text-xs">
+          <div className="flex flex-row space-x-2 items-center">
+            {/* Placed time */}
+            <div>
+              <span className="text-xs text-neutral-500 mr-1">Placed:</span>
+              <span className="text-xs font-medium">
+                {new Date(order.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+              </span>
+            </div>
+            
+            {/* Completion time (if available) */}
             {order.estimatedCompletionTime && (
-              <div className="flex flex-col items-end">
-                <span className="text-xs text-neutral-500">Est. Completion</span>
-                <span className="font-medium">
+              <div>
+                <span className="text-xs text-neutral-500 mr-1">ETA:</span>
+                <span className="text-xs font-medium">
                   {new Date(order.estimatedCompletionTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                 </span>
               </div>
@@ -857,7 +843,7 @@ function OrderCard({
             {/* Time status indicator */}
             {diffMinutes !== null && (
               <div className={cn(
-                "text-xs mt-1 font-medium", 
+                "text-xs font-medium", 
                 diffMinutes < 0 
                   ? diffMinutes < -5 ? "text-red-600" : "text-amber-600" 
                   : "text-green-600"
@@ -870,29 +856,29 @@ function OrderCard({
               </div>
             )}
           </div>
-        </div>
-        
-        {/* Action buttons - smaller and at the bottom */}
-        <div className="flex justify-end mt-2">
-          {/* Only show mark ready button when cooking or plating */}
-          {(order.status === OrderStatus.COOKING || order.status === OrderStatus.PLATING) && (
-            <button 
-              className="px-3 py-1 rounded text-xs font-medium shadow-sm bg-green-500 hover:bg-green-600 text-white"
-              onClick={() => markOrderAsReady(order.id)}
-            >
-              Mark Ready
-            </button>
-          )}
           
-          {/* Only show close button when served */}
-          {order.status === OrderStatus.SERVED && (
-            <button 
-              className="px-3 py-1 rounded text-xs font-medium shadow-sm bg-gray-500 hover:bg-gray-600 text-white ml-2"
-              onClick={() => closeOrder(order.id)}
-            >
-              Close
-            </button>
-          )}
+          {/* Action buttons - even smaller */}
+          <div className="flex">
+            {/* Only show mark ready button when cooking or plating */}
+            {(order.status === OrderStatus.COOKING || order.status === OrderStatus.PLATING) && (
+              <button 
+                className="px-2 py-0.5 rounded text-xs font-medium bg-green-500 hover:bg-green-600 text-white"
+                onClick={() => markOrderAsReady(order.id)}
+              >
+                Ready
+              </button>
+            )}
+            
+            {/* Only show close button when served */}
+            {order.status === OrderStatus.SERVED && (
+              <button 
+                className="px-2 py-0.5 rounded text-xs font-medium bg-gray-500 hover:bg-gray-600 text-white ml-1"
+                onClick={() => closeOrder(order.id)}
+              >
+                Close
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
