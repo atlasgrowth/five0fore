@@ -251,6 +251,20 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
 export const kitchenSettings = pgTable("kitchen_settings", {
   id: serial("id").primaryKey(),
   loadFactor: real("load_factor").notNull().default(1.0),
+  
+  // Attention level thresholds (% of estimated time)
+  attentionThreshold: real("attention_threshold").notNull().default(0.80), // 80% of expected time
+  priorityThreshold: real("priority_threshold").notNull().default(1.0),   // 100% of expected time (exactly due)
+  criticalThreshold: real("critical_threshold").notNull().default(1.25),  // 125% of expected time
+  
+  // Priority calculation weights (for scoring algorithm)
+  waitRatioWeight: real("wait_ratio_weight").notNull().default(2.0),     // Weight for time waited / expected ratio
+  orderAgeWeight: real("order_age_weight").notNull().default(1.0),       // Weight for order age in minutes
+  cookComplexityWeight: real("cook_complexity_weight").notNull().default(0.5), // Weight for cooking complexity
+  
+  // Load factor damping (to prevent wild swings)
+  loadFactorDamping: real("load_factor_damping").notNull().default(0.5), // Damping coefficient
+  
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   updatedBy: text("updated_by"), // User who made the change
 });
@@ -310,6 +324,14 @@ export type OrderWithItems = Order & {
   estimatedCompletionTime?: string | Date | null
 };
 
+// Define attention levels for orders
+export enum AttentionLevel {
+  NORMAL = "normal",
+  ATTENTION = "attention", // approaching expected time
+  PRIORITY = "priority",   // exceeded time by small margin
+  CRITICAL = "critical"    // severely delayed
+}
+
 export type OrderSummary = {
   id: string;
   bayId: number;
@@ -320,7 +342,9 @@ export type OrderSummary = {
   createdAt: Date;
   timeElapsed: number; // minutes since creation
   totalItems: number;
-  isDelayed: boolean;
+  isDelayed: boolean; // Keeping for backward compatibility
+  attentionLevel: AttentionLevel; // New field - indicates urgency level
+  priority?: number; // Numerical priority score
   estimatedCompletionTime?: string | Date | null;
   seatingType?: SeatingType; // Type of seating (BAY, BAR_LEFT, BAR_RIGHT, TABLE)
   displayName?: string; // Custom display name (e.g., "Bar L1")
