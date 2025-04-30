@@ -6,20 +6,26 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { OrderSummary, OrderWithItems, OrderItemStatus, OrderStatus } from "@shared/schema";
 
-// Simple timer to show when to start cooking an item
+// Advanced timer to show when to start cooking an item based on currently cooking items
 function StartTimer({ 
   orderCreatedAt, 
   cookSeconds, 
-  longestCookItem 
+  longestCookItem,
+  orderItems 
 }: { 
   orderCreatedAt: string, 
   cookSeconds: number, 
-  longestCookItem: boolean 
+  longestCookItem: boolean,
+  orderItems?: any[]
 }) {
+  const [timeToStart, setTimeToStart] = useState<number | null>(null);
+  const [isTimeToStart, setIsTimeToStart] = useState<boolean>(false);
+  const [timerActive, setTimerActive] = useState<boolean>(false);
+  
   // If this is the longest cook item, it should start immediately
   if (longestCookItem) {
     return (
-      <div className="ml-2">
+      <div className="flex items-center ml-2">
         <button 
           className="p-1 text-xs bg-red-100 hover:bg-red-200 text-red-800 rounded flex items-center font-bold"
           title="Start cooking now"
@@ -40,18 +46,115 @@ function StartTimer({
     );
   }
   
-  // Calculate a simple wait time (hard-coded for now for simplicity)
-  // For a real implementation, we would need to pass the longest cook time from the parent
-  const myItemMinutes = Math.round(cookSeconds / 60);
-  const waitMinutes = Math.max(0, 13 - myItemMinutes); // Assuming longest item is 13 minutes
+  useEffect(() => {
+    // Find all currently cooking items in the order
+    if (!orderItems) return;
+    
+    const cookingItems = orderItems.filter(item => 
+      item.status === OrderItemStatus.COOKING && item.firedAt
+    );
+    
+    if (cookingItems.length === 0) {
+      // If nothing is cooking, we should cook the longest item first
+      setIsTimeToStart(longestCookItem);
+      setTimeToStart(null);
+      setTimerActive(false);
+      return;
+    }
+    
+    // If there are cooking items, find when each will be done
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const itemFinishTimes: number[] = [];
+      
+      // Calculate when each cooking item will be done
+      cookingItems.forEach(item => {
+        const startTime = new Date(item.firedAt).getTime();
+        const itemCookSeconds = item.cookSeconds || item.menuItem?.prep_seconds || 300;
+        const finishTimeMs = startTime + (itemCookSeconds * 1000);
+        
+        // How many milliseconds until this item is done
+        itemFinishTimes.push(finishTimeMs);
+      });
+      
+      // Find the earliest cooking item to finish
+      const earliestFinishTime = Math.min(...itemFinishTimes);
+      
+      // When to start this item = (earliest finish time - this item's cook time)
+      const whenToStartMs = earliestFinishTime - (cookSeconds * 1000);
+      
+      // If it's already time to start (now >= when to start)
+      if (now >= whenToStartMs) {
+        setIsTimeToStart(true);
+        setTimeToStart(0);
+      } else {
+        // Calculate seconds remaining until it's time to start
+        const remainingMs = whenToStartMs - now;
+        const remainingSeconds = Math.ceil(remainingMs / 1000);
+        setTimeToStart(remainingSeconds);
+        setIsTimeToStart(false);
+      }
+      
+      setTimerActive(true);
+    };
+    
+    updateTimer();
+    const timerId = setInterval(updateTimer, 1000);
+    
+    return () => clearInterval(timerId);
+  }, [orderItems, longestCookItem, cookSeconds]);
+  
+  // Format time in minutes and seconds (MM:SS)
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+  
+  if (isTimeToStart) {
+    return (
+      <div className="flex items-center ml-2">
+        <button 
+          className="p-1 text-xs bg-red-100 hover:bg-red-200 text-red-800 rounded flex items-center font-bold"
+          title="Start cooking now"
+          onClick={(e) => {
+            e.stopPropagation();
+            const checkbox = e.currentTarget.closest('div[data-item-id]')?.querySelector('input[type="checkbox"]') as HTMLInputElement;
+            if (checkbox) {
+              checkbox.click();
+            }
+          }}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+          </svg>
+          START NOW
+        </button>
+      </div>
+    );
+  }
+  
+  if (!timerActive) {
+    // Simple wait message when there's not enough information yet
+    return (
+      <div className="flex items-center ml-2">
+        <div className="p-1 text-xs bg-gray-100 text-gray-700 rounded flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Wait to start
+        </div>
+      </div>
+    );
+  }
   
   return (
-    <div className="ml-2">
+    <div className="flex items-center ml-2">
       <div className="p-1 text-xs bg-gray-100 text-gray-800 rounded flex items-center font-medium">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        WAIT {waitMinutes} MIN
+        Start in {timeToStart !== null ? formatTime(timeToStart) : '--:--'}
       </div>
     </div>
   );
@@ -252,17 +355,28 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
             No orders in this category
           </div>
         ) : (
-          // Sort orders by creation time (oldest first) to prevent jumping
+          // Sort orders by status in workflow order: NEW -> COOKING -> PLATING -> READY
           [...orders].sort((a, b) => {
-            // First sort by whether order is NEW or not
-            const aIsNew = a.status === OrderStatus.NEW;
-            const bIsNew = b.status === OrderStatus.NEW;
+            // Status priority: NEW -> COOKING -> PLATING -> READY -> SERVED -> CLOSED -> CANCELLED
+            const statusPriority: Record<string, number> = {
+              [OrderStatus.NEW]: 0,
+              [OrderStatus.COOKING]: 1,
+              [OrderStatus.PLATING]: 2,
+              [OrderStatus.READY]: 3,
+              [OrderStatus.SERVED]: 4,
+              [OrderStatus.CLOSED]: 5,
+              [OrderStatus.CANCELLED]: 6
+            };
             
-            if (aIsNew !== bIsNew) {
-              return aIsNew ? -1 : 1; // New orders always come first
+            // First sort by status (workflow order)
+            const aPriority = statusPriority[a.status] || 999;
+            const bPriority = statusPriority[b.status] || 999;
+            
+            if (aPriority !== bPriority) {
+              return aPriority - bPriority;
             }
             
-            // Then sort by creation time (oldest first)
+            // If same status, sort by creation time (oldest first) to prevent jumping
             return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           }).map((order) => (
             <div key={order.id} className="flex-shrink-0 min-w-[350px] max-w-[400px] snap-start">
@@ -521,6 +635,7 @@ function OrderCard({
                                 return currCookTime > longestCookTime ? curr : longest;
                               }, item) === item
                             }
+                            orderItems={orderDetails.items}
                           />
                         )}
                       </div>
