@@ -75,7 +75,7 @@ export default function BaySelection({ onBayClick }: BaySelectionProps) {
       return bay.number.toString();
     }
   };
-  
+
   // Render a bay tile with consistent styling
   const renderBayTile = (bay: any) => {
     // Base styles for all types
@@ -84,11 +84,11 @@ export default function BaySelection({ onBayClick }: BaySelectionProps) {
       transition-transform hover:scale-105 hover:shadow-md
       flex flex-col items-center justify-center py-4 h-20
     `;
-    
+
     // Status-based styling based on our color coding system
     let statusStyle = '';
     const lowercaseStatus = bay.status.toLowerCase();
-    
+
     // Handle both old status names and new status names for backward compatibility
     switch(lowercaseStatus) {
       // Blue - New orders
@@ -96,46 +96,46 @@ export default function BaySelection({ onBayClick }: BaySelectionProps) {
       case 'new':
         statusStyle = 'bg-gradient-to-r from-blue-500 to-blue-600 text-white';
         break;
-        
+
       // Yellow/Orange - Cooking orders
       case 'cooking':
       case 'flagged':  // Legacy status
         statusStyle = 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white';
         break;
-        
+
       // Purple - Plating orders
       case 'plating':
       case 'alert':  // Legacy status
         statusStyle = 'bg-gradient-to-r from-purple-500 to-purple-600 text-white';
         break;
-        
+
       // Green - Ready orders
       case 'ready':
         statusStyle = 'bg-gradient-to-r from-green-500 to-green-600 text-white';
         break;
-        
+
       // Gray - Empty or Served bays
       case 'empty':
       case 'occupied': // Legacy status
       case 'served':
         statusStyle = 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-800 border-2 border-gray-300 hover:border-gray-400';
         break;
-        
+
       // Dark Gray - Closed orders
       case 'closed':
         statusStyle = 'bg-gradient-to-r from-gray-500 to-gray-600 text-white';
         break;
-        
+
       // Dark Gray - Cancelled orders
       case 'cancelled':
         statusStyle = 'bg-gradient-to-r from-neutral-600 to-neutral-700 text-white';
         break;
-        
+
       default:
         statusStyle = 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-800 border-2 border-gray-300 hover:border-gray-400';
         break;
     }
-    
+
     // Type-specific styling
     let typeStyle = 'border-emerald-200';
     if (bay.type === 'BAR_LEFT' || bay.type === 'BAR_RIGHT') {
@@ -143,7 +143,7 @@ export default function BaySelection({ onBayClick }: BaySelectionProps) {
     } else if (bay.type === 'TABLE') {
       typeStyle = 'border-purple-300';
     }
-    
+
     return (
       <div 
         className={`${baseStyle} ${statusStyle} ${typeStyle}`}
@@ -153,18 +153,18 @@ export default function BaySelection({ onBayClick }: BaySelectionProps) {
         <div className="absolute -top-1 -right-1 bg-white rounded-bl-md px-1.5 py-0.5 text-xs font-medium text-emerald-800 border-b border-l border-emerald-200">
           {bay.floor}F
         </div>
-        
+
         {/* Type indicator (small icon or letter) */}
         <div className="absolute top-1 left-1 text-xs font-medium">
           {(bay.type === 'BAR_LEFT' || bay.type === 'BAR_RIGHT') && <span className="text-xs">B</span>}
           {bay.type === 'TABLE' && <span className="text-xs">T</span>}
         </div>
-        
+
         {/* Bay number or display name */}
         <span className="text-xl font-bold">
           {bay.displayName || formatBayNumber(bay)}
         </span>
-        
+
         {/* Status indicator */}
         <div className="mt-1">
           {bay.orders && bay.orders.length > 0 ? (
@@ -175,7 +175,7 @@ export default function BaySelection({ onBayClick }: BaySelectionProps) {
             <BayStatusBadge status={bay.status} />
           )}
         </div>
-        
+
         {/* Hover effects */}
         <div className="absolute inset-0 bg-emerald-900 opacity-0 group-hover:opacity-10 transition-opacity"></div>
         {bay.type === 'BAY' && (
@@ -199,7 +199,7 @@ export default function BaySelection({ onBayClick }: BaySelectionProps) {
           Five O Four Golf
         </div>
       </div>
-      
+
       {/* Filter controls */}
       <div className="p-5 bg-gradient-to-b from-gray-50 to-white">
         <div className="flex flex-wrap gap-4">

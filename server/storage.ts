@@ -16,18 +16,18 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   // Categories
   getCategories(): Promise<Category[]>;
   getCategoryById(id: number): Promise<Category | undefined>;
   createCategory(category: InsertCategory): Promise<Category>;
-  
+
   // Menu Items
   getMenuItems(): Promise<MenuItem[]>;
   getMenuItemsByCategory(categoryId: number): Promise<MenuItem[]>;
   getMenuItemById(id: string | number): Promise<MenuItem | undefined>;
   createMenuItem(menuItem: InsertMenuItem): Promise<MenuItem>;
-  
+
   // Bays
   getBays(): Promise<Bay[]>;
   getBaysByFloor(floor: number): Promise<Bay[]>;
@@ -35,7 +35,7 @@ export interface IStorage {
   getBayById(id: number): Promise<Bay | undefined>;
   createBay(bay: InsertBay): Promise<Bay>;
   updateBayStatus(id: number, status: string): Promise<Bay | undefined>;
-  
+
   // Orders
   getOrders(): Promise<Order[]>;
   getOrderById(id: string): Promise<Order | undefined>;
@@ -46,35 +46,36 @@ export interface IStorage {
   createOrder(order: InsertOrder, cart: Cart): Promise<Order>;
   updateOrderStatus(id: string, status: string): Promise<Order | undefined>;
 
-  
+
   // Order Items
   getOrderItems(orderId: string): Promise<OrderItem[]>;
   createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem>;
-  
+
   // Legacy method (to be deprecated) - updates completed flag
   updateOrderItemStatus(id: string, completed: boolean): Promise<OrderItem | undefined>;
-  
+
   // Methods to support enhanced status tracking
   markFired(id: string): Promise<OrderItem | undefined>;
   markPlating(id: string): Promise<OrderItem | undefined>;
   markReady(id: string): Promise<OrderItem | undefined>;
   markDelivered(id: string): Promise<OrderItem | undefined>;
   autoFlipReady(): Promise<OrderItem[]>;
-  
+
   // New methods for enhanced status tracking
   fireOrderItem(id: string): Promise<OrderItem | undefined>; // Sets status to COOKING and captures firedAt timestamp
   markOrderItemPlating(id: string): Promise<OrderItem | undefined>; // Sets status to PLATING and captures platingAt timestamp
   markOrderItemReady(id: string): Promise<OrderItem | undefined>; // Sets status to READY and captures actualReadyAt timestamp
   markOrderItemDelivered(id: string): Promise<OrderItem | undefined>; // Sets status to DELIVERED and captures servedAt timestamp
   getOrderItemsByStation(station: string, status?: string): Promise<OrderItem[]>; // Filtered by station and optional status
-  
+
   // Initialize with sample data
   initializeData(): Promise<void>;
+  recalcBayStatus(bayId: string): Promise<void>;
 }
 
 // Import database instance and helpers
 import { db, pool } from "./db";
-import { eq, asc, desc, and, or, isNotNull, isNull, lt } from "drizzle-orm";
+import { eq, asc, desc, and, or, isNotNull, isNull, lt, notInArray } from "drizzle-orm";
 
 // Implement the Database Storage
 export class DatabaseStorage implements IStorage {
@@ -123,7 +124,7 @@ export class DatabaseStorage implements IStorage {
   async getMenuItemsByCategory(categoryId: number): Promise<MenuItem[]> {
     const category = await this.getCategoryById(categoryId);
     if (!category) return [];
-    
+
     return db
       .select()
       .from(menuItems)
@@ -190,7 +191,7 @@ export class DatabaseStorage implements IStorage {
       ...bay,
       type: bay.type as SeatingType
     };
-    
+
     const [newBay] = await db
       .insert(bays)
       .values([bayWithProperType])
@@ -238,7 +239,7 @@ export class DatabaseStorage implements IStorage {
       }
 
       const orderItemsList = await this.getOrderItems(id);
-      
+
       // Fetch menu items for each order item - don't convert menuItemId to number
       const items = await Promise.all(
         orderItemsList.map(async (item) => {
@@ -324,16 +325,16 @@ export class DatabaseStorage implements IStorage {
       activeOrders.map(async (order) => {
         const bay = await this.getBayById(order.bayId);
         const items = await this.getOrderItems(order.id);
-        
+
         // Calculate how many minutes ago the order was created
         const now = new Date();
         const createdAt = new Date(order.createdAt);
         const timeElapsed = Math.floor((now.getTime() - createdAt.getTime()) / 60000);
-        
+
         // Determine if the order is delayed
         // For simplicity, we'll consider an order delayed if it's been more than 15 minutes since creation
         const isDelayed = timeElapsed > 15;
-        
+
         return {
           id: order.id,
           orderNumber: `#${order.id.substring(0, 6)}`, // Generate order number from ID
@@ -363,15 +364,15 @@ export class DatabaseStorage implements IStorage {
       ordersWithStatus.map(async (order) => {
         const bay = await this.getBayById(order.bayId);
         const items = await this.getOrderItems(order.id);
-        
+
         // Calculate how many minutes ago the order was created
         const now = new Date();
         const createdAt = new Date(order.createdAt);
         const timeElapsed = Math.floor((now.getTime() - createdAt.getTime()) / 60000);
-        
+
         // Determine if the order is delayed (assuming a 15-minute threshold)
         const isDelayed = timeElapsed > 15;
-        
+
         return {
           id: order.id,
           orderNumber: `#${order.id.substring(0, 6)}`, // Generate order number from ID
@@ -398,19 +399,19 @@ export class DatabaseStorage implements IStorage {
       DEFAULT_COOK_SECONDS,
       calculateOrderReadyTime 
     } = await import('./constants');
-    
+
     // Get kitchen load factor from settings
     const settings = await db
       .select()
       .from(schema.kitchenSettings)
       .limit(1);
-    
+
     // Default to 1.0 if no settings found
     const loadFactor = settings[0]?.loadFactor || 1.0;
-    
+
     // Calculate the estimated completion time based on the longest item
     let longestCookTimeSeconds = 0;
-    
+
     // First, identify the longest cook time item
     for (const item of cart.items) {
       const menuItem = await this.getMenuItemById(item.menuItemId);
@@ -418,25 +419,25 @@ export class DatabaseStorage implements IStorage {
         longestCookTimeSeconds = menuItem.prep_seconds;
       }
     }
-    
+
     // If no valid cook time found, use default
     if (longestCookTimeSeconds <= 0) {
       longestCookTimeSeconds = DEFAULT_COOK_SECONDS;
     }
-    
+
     // Apply kitchen load factor to the cook time
     longestCookTimeSeconds = Math.ceil(longestCookTimeSeconds * loadFactor);
-    
+
     // Create order with estimated completion time
     const createdAt = new Date();
     const estimatedCompletionTime = calculateOrderReadyTime(createdAt, longestCookTimeSeconds);
-    
+
     // Update the order with the estimated completion time
     const orderWithEstimation = {
       ...order,
       estimatedCompletionTime
     };
-    
+
     // Create the order
     const [newOrder] = await db
       .insert(orders)
@@ -448,22 +449,22 @@ export class DatabaseStorage implements IStorage {
       // Look up the menu item to get its station and price
       const menuItem = await this.getMenuItemById(item.menuItemId);
       const station = menuItem?.station || "GRILL";
-      
+
       // Get cook seconds from menu item (use original prep_seconds from menu item as cook time)
       let cookSeconds = menuItem?.prep_seconds || DEFAULT_COOK_SECONDS;
-      
+
       // Apply kitchen load factor to individual items as well
       cookSeconds = Math.ceil(cookSeconds * loadFactor);
-      
+
       // Calculate total expected time including prep and expo buffers
       const expectedTotalTime = PREP_BUFFER_SECONDS + cookSeconds + EXPO_BUFFER_SECONDS;
-      
+
       try {
         // Debug what's being saved
         console.log(`Item being saved:`, JSON.stringify(item));
         console.log(`Customizations type:`, item.customizations ? typeof item.customizations : 'null/undefined');
         console.log(`Customizations data:`, item.customizations ? JSON.stringify(item.customizations) : 'null');
-        
+
         // Insert order item using drizzle ORM with proper JSON handling for PostgreSQL JSONB
         const values = {
           orderId: newOrder.id,
@@ -477,9 +478,9 @@ export class DatabaseStorage implements IStorage {
           status: OrderItemStatus.NEW,
           customizations: item.customizations || null
         };
-        
+
         console.log('Inserting order item with values:', JSON.stringify(values));
-        
+
         await db.insert(orderItems).values([values]);
       } catch (error) {
         console.error(`Error inserting order item:`, error);
@@ -496,7 +497,7 @@ export class DatabaseStorage implements IStorage {
       .set({ status: status.toUpperCase() })
       .where(eq(orders.id, id))
       .returning();
-    
+
     return updatedOrder || undefined;
   }
 
@@ -509,21 +510,21 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(orderItems)
       .where(eq(orderItems.orderId, orderId));
-    
+
     // Debug what's being returned from the database
     console.log(`Item count: ${items.length}`);
     if (items.length > 0) {
       console.log(`First item customizations: ${JSON.stringify(items[0].customizations)}`);
       console.log(`First item notes: ${JSON.stringify(items[0].notes)}`);
     }
-    
+
     return items;
   }
 
   async createOrderItem(orderItem: InsertOrderItem): Promise<OrderItem> {
     // Fetch the menu item to get its price_cents
     const menuItem = await this.getMenuItemById(orderItem.menuItemId);
-    
+
     // Handle customizations properly, ensuring it's the right type
     let customizations = null;
     if (orderItem.customizations) {
@@ -540,7 +541,7 @@ export class DatabaseStorage implements IStorage {
         }
       }
     }
-    
+
     // Add price_cents and station info from the menu item
     const orderItemWithPrice = {
       ...orderItem,
@@ -549,7 +550,7 @@ export class DatabaseStorage implements IStorage {
       cookSeconds: menuItem?.prep_seconds || 300,
       customizations: customizations
     };
-    
+
     const [newOrderItem] = await db
       .insert(orderItems)
       .values([orderItemWithPrice])
@@ -569,13 +570,13 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(orderItems.id, id))
       .returning();
-    
+
     return updatedOrderItem || undefined;
   }
 
   // New methods for enhanced status tracking - five state workflow
   // NEW → COOKING → PLATING → READY → SERVED
-  
+
   // Transition from NEW to COOKING
   async fireOrderItem(id: string): Promise<OrderItem | undefined> {
     // Get the order item to calculate readyAt
@@ -583,17 +584,17 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(orderItems)
       .where(eq(orderItems.id, id));
-    
+
     if (!orderItem) return undefined;
-    
+
     // Get the menu item to ensure we have the station and proper cook time
     const menuItem = await this.getMenuItemById(orderItem.menuItemId);
     const station = orderItem.station || (menuItem ? menuItem.station : null);
-    
+
     // IMPORTANT: Always ensure we have a valid non-zero cookSeconds value
     // First try to use menu item's prep_seconds, then fall back to DEFAULT_COOK_SECONDS
     let cookTimeSeconds: number;
-    
+
     // Get the value from menu item if available (primary source)
     if (menuItem && menuItem.prep_seconds > 0) {
       cookTimeSeconds = menuItem.prep_seconds;
@@ -611,10 +612,10 @@ export class DatabaseStorage implements IStorage {
       cookTimeSeconds = DEFAULT_COOK_SECONDS;
       console.log(`Using DEFAULT_COOK_SECONDS (${cookTimeSeconds}s) for item ${id}`);
     }
-    
+
     // Double check we have a positive value
     if (cookTimeSeconds <= 0) cookTimeSeconds = 300;
-    
+
     try {
       // Update status and all timing fields using the Drizzle ORM to avoid timestamp type issues
       const [updatedOrderItem] = await db
@@ -633,7 +634,7 @@ export class DatabaseStorage implements IStorage {
         })
         .where(eq(orderItems.id, id))
         .returning();
-    
+
       // Update parent order status to COOKING if needed
       if (updatedOrderItem) {
         // Get the order
@@ -643,14 +644,14 @@ export class DatabaseStorage implements IStorage {
           await this.updateOrderStatus(order.id, OrderStatus.COOKING);
         }
       }
-    
+
       return updatedOrderItem;
     } catch (error) {
       console.error(`Error firing order item ${id}:`, error);
       return undefined;
     }
   }
-  
+
   // Helper to get station by menu item ID
   private async getMenuItemStationById(menuItemId: string): Promise<string | null> {
     try {
@@ -661,7 +662,7 @@ export class DatabaseStorage implements IStorage {
       return null;
     }
   }
-  
+
   // Transition from COOKING to PLATING
   async markOrderItemPlating(id: string): Promise<OrderItem | undefined> {
     // Get the order item
@@ -669,17 +670,17 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(orderItems)
       .where(eq(orderItems.id, id));
-    
+
     if (!orderItem) return undefined;
     if (orderItem.status !== OrderItemStatus.COOKING) {
       console.warn(`Cannot transition item ${id} to PLATING because its status is ${orderItem.status}`);
       return orderItem;
     }
-    
+
     // Get the menu item to ensure we have the station
     const menuItem = await this.getMenuItemById(orderItem.menuItemId);
     const station = orderItem.station || (menuItem ? menuItem.station : null);
-    
+
     try {
       // Update using Drizzle ORM instead of direct SQL to avoid timestamp type issues
       const [updatedOrderItem] = await db
@@ -695,14 +696,14 @@ export class DatabaseStorage implements IStorage {
         })
         .where(eq(orderItems.id, id))
         .returning();
-      
+
       // Update parent order status based on all items' statuses
       if (updatedOrderItem) {
         // Use the updateOrderStatusBasedOnItems method to determine the correct status
         // This will check if ALL items are at least in progress before setting PLATING
         await this.updateOrderStatusBasedOnItems(updatedOrderItem.orderId);
       }
-      
+
       return updatedOrderItem;
     } catch (error) {
       console.error(`Error marking order item ${id} as plating:`, error);
@@ -716,13 +717,13 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(orderItems)
       .where(eq(orderItems.id, id));
-    
+
     if (!orderItem) return undefined;
-    
+
     // Get the menu item to ensure we have the station
     const menuItem = await this.getMenuItemById(orderItem.menuItemId);
     const station = orderItem.station || (menuItem ? menuItem.station : null);
-    
+
     try {
       // Update using Drizzle ORM to avoid timestamp type issues
       const [updatedOrderItem] = await db
@@ -736,59 +737,59 @@ export class DatabaseStorage implements IStorage {
         })
         .where(eq(orderItems.id, id))
         .returning();
-      
+
       // Update parent order status if appropriate
       if (updatedOrderItem) {
         // Check if all items in the order are READY or DELIVERED
         await this.updateOrderStatusBasedOnItems(updatedOrderItem.orderId);
       }
-      
+
       return updatedOrderItem;
     } catch (error) {
       console.error(`Error marking order item ${id} as ready:`, error);
       return undefined;
     }
   }
-  
+
   // Check all order items and update order status accordingly
   private async updateOrderStatusBasedOnItems(orderId: string): Promise<void> {
     // Get all order items for this order
     const items = await this.getOrderItems(orderId);
-    
+
     // No items, nothing to do
     if (items.length === 0) return;
-    
+
     // If any item is cooking, the order is cooking
     const hasCookingItems = items.some(item => item.status === OrderItemStatus.COOKING);
     if (hasCookingItems) {
       await this.updateOrderStatus(orderId, OrderStatus.COOKING);
       return;
     }
-    
+
     // For PLATING status: 
     // Only set order to PLATING if:
     // 1. At least one item is in PLATING status AND
     // 2. ALL other items are either COOKING, PLATING, READY, or DELIVERED (no NEW items)
     const hasPlatingItems = items.some(item => item.status === OrderItemStatus.PLATING);
     const hasNewItems = items.some(item => item.status === OrderItemStatus.NEW || item.status === null);
-    
+
     if (hasPlatingItems && !hasNewItems) {
       await this.updateOrderStatus(orderId, OrderStatus.PLATING);
       return;
     }
-    
+
     // If all items are READY or DELIVERED, and at least one is READY, order is READY
     const allReadyOrDelivered = items.every(item => 
       item.status === OrderItemStatus.READY || 
       item.status === OrderItemStatus.DELIVERED
     );
     const hasReadyItems = items.some(item => item.status === OrderItemStatus.READY);
-    
+
     if (allReadyOrDelivered && hasReadyItems) {
       await this.updateOrderStatus(orderId, OrderStatus.READY);
       return;
     }
-    
+
     // If all items are DELIVERED, order is SERVED
     const allDelivered = items.every(item => item.status === OrderItemStatus.DELIVERED);
     if (allDelivered) {
@@ -803,13 +804,13 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(orderItems)
       .where(eq(orderItems.id, id));
-    
+
     if (!orderItem) return undefined;
-    
+
     // Get the menu item to ensure we have the station
     const menuItem = await this.getMenuItemById(orderItem.menuItemId);
     const station = orderItem.station || (menuItem ? menuItem.station : null);
-    
+
     try {
       // Update using Drizzle ORM to avoid timestamp type issues
       const [updatedOrderItem] = await db
@@ -823,41 +824,107 @@ export class DatabaseStorage implements IStorage {
         })
         .where(eq(orderItems.id, id))
         .returning();
-      
+
       // Update parent order status if appropriate
       if (updatedOrderItem) {
         // Check if all items in the order are delivered
         await this.updateOrderStatusBasedOnItems(updatedOrderItem.orderId);
       }
-      
+
       return updatedOrderItem;
     } catch (error) {
       console.error(`Error marking order item ${id} as delivered:`, error);
       return undefined;
     }
   }
-  
+
   // New convenience methods with shorter names for the workflow script
   async markFired(id: string): Promise<OrderItem | undefined> {
-    return this.fireOrderItem(id);
+    const updateResult = await db
+      .update(orderItems)
+      .set({
+        status: OrderItemStatus.COOKING,
+        firedAt: new Date(),
+      })
+      .where(eq(orderItems.id, id))
+      .returning();
+
+    if (!updateResult || updateResult.length === 0) {
+      throw new Error(`Failed to update item ${id} to COOKING status`);
+    }
+
+    const item = updateResult[0];
+
+    const getOrderResult = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.id, item.orderId));
+
+    if (getOrderResult.length === 0) {
+      throw new Error(`Order ${item.orderId} not found`);
+    }
+
+    const order = getOrderResult[0];
+
+    // Broadcast update
+    broadcast(WebSocketMessageType.KITCHEN_ITEM_UPDATE, {
+      order: toBayOrderSummaryDTO(order),
+      item: toOrderItemDTO(item)
+    });
+
+    await this.recalcBayStatus(order.bayId);
+    return item;
   }
-  
+
   async markPlating(id: string): Promise<OrderItem | undefined> {
     return this.markOrderItemPlating(id);
   }
-  
+
   async markReady(id: string): Promise<OrderItem | undefined> {
-    return this.markOrderItemReady(id);
+    const updateResult = await db
+      .update(orderItems)
+      .set({
+        status: OrderItemStatus.READY,
+        readyAt: new Date(),
+      })
+      .where(eq(orderItems.id, id))
+      .returning();
+
+    if (!updateResult || updateResult.length === 0) {
+      throw new Error(`Failed to update item ${id} to READY status`);
+    }
+
+    const item = updateResult[0];
+
+    const getOrderResult = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.id, item.orderId));
+
+    if (getOrderResult.length === 0) {
+      throw new Error(`Order ${item.orderId} not found`);
+    }
+
+    const order = getOrderResult[0];
+
+    // Broadcast update
+    broadcast(WebSocketMessageType.KITCHEN_ITEM_UPDATE, {
+      order: toBayOrderSummaryDTO(order),
+      item: toOrderItemDTO(item)
+    });
+
+    await this.recalcBayStatus(order.bayId);
+    return item;
   }
-  
+
   async markDelivered(id: string): Promise<OrderItem | undefined> {
     return this.markOrderItemDelivered(id);
   }
-  
+
   // Automatically find and mark items as ready that have exceeded their cook time
   async autoFlipReady(): Promise<OrderItem[]> {
     const now = new Date();
-    
+
     // Use direct SQL query to avoid Drizzle ORM operator issues
     const { rows: readyItems } = await pool.query(`
       SELECT * FROM order_items 
@@ -865,9 +932,9 @@ export class DatabaseStorage implements IStorage {
       AND ready_at IS NOT NULL 
       AND ready_at <= NOW()
     `);
-    
+
     console.log(`Found ${readyItems.length} items that should be marked as ready`);
-    
+
     // Return the items but DON'T automatically transition them
     // This allows the UI to highlight them for kitchen staff attention
     return readyItems as OrderItem[];
@@ -900,6 +967,64 @@ export class DatabaseStorage implements IStorage {
     // This method is for development/testing purposes
     // In a production app, you'd typically have migrations and seed scripts
     console.log("Database already initialized!");
+  }
+  async recalcBayStatus(bayId: string): Promise<void> {
+    const rows = await db.select({ status: orderItems.status })
+       .from(orderItems)
+       .leftJoin(orders, eq(orders.id, orderItems.orderId))
+       .where(and(eq(orders.bayId, bayId),
+                  notInArray(orders.status, ["CLOSED", "CANCELLED"])));
+
+    const s = rows.map(r => r.status);
+    let bayStatus: "AVAILABLE" | "NEW" | "COOKING" | "PLATING" | "READY" = "AVAILABLE";
+    if (s.includes("NEW")) bayStatus = "NEW";
+    else if (s.includes("COOKING")) bayStatus = "COOKING";
+    else if (s.includes("PLATING")) bayStatus = "PLATING";
+    else if (s.length && s.every(x => x === "READY")) bayStatus = "READY";
+
+    await db.update(bays).set({ status: bayStatus }).where(eq(bays.id, bayId));
+    const bay = await db.query.bays.findFirst({ where: eq(bays.id, bayId) });
+    broadcast("bay_updated", { bay: toBayDTO(bay) });
+  }
+  async markOrderServed(orderId: string) {
+    // First, update the order status
+    const updateOrderResult = await db
+      .update(orders)
+      .set({
+        status: OrderStatus.SERVED,
+        servedAt: new Date(),
+      })
+      .where(eq(orders.id, orderId))
+      .returning();
+
+    if (!updateOrderResult || updateOrderResult.length === 0) {
+      throw new Error(`Failed to update order ${orderId} to SERVED status`);
+    }
+
+    const ord = updateOrderResult[0];
+
+    // Then, update all items for this order to SERVED status
+    await db
+      .update(orderItems)
+      .set({
+        status: OrderItemStatus.SERVED,
+        servedAt: new Date(),
+      })
+      .where(and(
+        eq(orderItems.orderId, orderId),
+        not(eq(orderItems.status, OrderItemStatus.CANCELLED))
+      ));
+
+    // Fetch the updated order with items
+    const completeOrder = await this.getOrderWithItems(orderId);
+
+    // Broadcast update
+    broadcast(WebSocketMessageType.ORDER_SERVED, {
+      order: completeOrder,
+    });
+
+    await this.recalcBayStatus(ord.bayId);
+    return ord;
   }
 }
 
