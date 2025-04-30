@@ -403,10 +403,13 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
         id="orders-scroll-container"
         className="space-y-6 overflow-auto pb-6 pt-2"
       >
-        {/* NEW & COOKING row (top) */}
+        {/* NEW & COOKING row (top) - horizontal scrollable row */}
         <div className="space-y-4">
-          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-primary border-l-4 border-blue-500">
-            New & Cooking ({ordersByStatus.new.length + ordersByStatus.cooking.length})
+          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-primary border-l-4 border-blue-500 flex items-center">
+            <span>New & Cooking ({ordersByStatus.new.length + ordersByStatus.cooking.length})</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
           </h2>
           
           {ordersByStatus.new.length === 0 && ordersByStatus.cooking.length === 0 ? (
@@ -414,10 +417,10 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
               No new or cooking orders
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="flex space-x-4 overflow-x-auto pb-4">
               {/* NEW orders first */}
               {ordersByStatus.new.map((order) => (
-                <div key={order.id}>
+                <div key={order.id} className="min-w-[300px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -429,7 +432,7 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
               
               {/* Then COOKING orders */}
               {ordersByStatus.cooking.map((order) => (
-                <div key={order.id}>
+                <div key={order.id} className="min-w-[300px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -442,10 +445,13 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
           )}
         </div>
         
-        {/* PLATING row (second) */}
+        {/* PLATING row (second) - horizontal scrollable row */}
         <div className="space-y-4">
-          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-purple-700 border-l-4 border-purple-500">
-            Plating ({ordersByStatus.plating.length})
+          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-purple-700 border-l-4 border-purple-500 flex items-center">
+            <span>Plating ({ordersByStatus.plating.length})</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
           </h2>
           
           {ordersByStatus.plating.length === 0 ? (
@@ -453,9 +459,9 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
               No orders being plated
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="flex space-x-4 overflow-x-auto pb-4">
               {ordersByStatus.plating.map((order) => (
-                <div key={order.id}>
+                <div key={order.id} className="min-w-[300px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -468,10 +474,13 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
           )}
         </div>
         
-        {/* READY row (third) */}
+        {/* READY row (third) - horizontal scrollable row */}
         <div className="space-y-4">
-          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-green-700 border-l-4 border-green-500">
-            Ready ({ordersByStatus.ready.length})
+          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-green-700 border-l-4 border-green-500 flex items-center">
+            <span>Ready ({ordersByStatus.ready.length})</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
           </h2>
           
           {ordersByStatus.ready.length === 0 ? (
@@ -479,9 +488,9 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
               No orders ready to serve
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="flex space-x-4 overflow-x-auto pb-4">
               {ordersByStatus.ready.map((order) => (
-                <div key={order.id}>
+                <div key={order.id} className="min-w-[300px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -494,10 +503,13 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
           )}
         </div>
         
-        {/* SERVED row (fourth) */}
+        {/* SERVED row (fourth) - horizontal scrollable row */}
         <div className="space-y-4">
-          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-blue-700 border-l-4 border-blue-400">
-            Served ({ordersByStatus.served.length})
+          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-blue-700 border-l-4 border-blue-400 flex items-center">
+            <span>Served ({ordersByStatus.served.length})</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
           </h2>
           
           {ordersByStatus.served.length === 0 ? (
@@ -505,9 +517,9 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
               No served orders
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="flex space-x-4 overflow-x-auto pb-4">
               {ordersByStatus.served.map((order) => (
-                <div key={order.id}>
+                <div key={order.id} className="min-w-[300px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -520,10 +532,13 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
           )}
         </div>
         
-        {/* CLOSED row (bottom) */}
+        {/* CLOSED row (bottom) - horizontal scrollable row */}
         <div className="space-y-4">
-          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-gray-700 border-l-4 border-gray-500">
-            Closed ({ordersByStatus.closed.length})
+          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-gray-700 border-l-4 border-gray-500 flex items-center">
+            <span>Closed ({ordersByStatus.closed.length})</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-2 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
           </h2>
           
           {ordersByStatus.closed.length === 0 ? (
@@ -531,9 +546,9 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
               No closed orders
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="flex space-x-4 overflow-x-auto pb-4">
               {ordersByStatus.closed.map((order) => (
-                <div key={order.id}>
+                <div key={order.id} className="min-w-[300px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
