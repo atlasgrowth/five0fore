@@ -82,16 +82,16 @@ export function calculateOrderReadyTime(
  * Calculate the attention level for an order based on its estimated completion time
  * 
  * @param estimatedCompletionTime When the order is expected to be ready
- * @param attentionThreshold Percentage of time when order needs attention (default 80%)
- * @param priorityThreshold Percentage of time when order becomes priority (default 100%)
- * @param criticalThreshold Percentage of time when order becomes critical (default 125%)
+ * @param attentionThreshold Percentage of time when order needs attention (default 90%)
+ * @param priorityThreshold Percentage of time when order becomes priority (default 120%)
+ * @param criticalThreshold Percentage of time when order becomes critical (default 150%)
  * @returns The attention level for the order
  */
 export function calculateAttentionLevel(
   estimatedCompletionTime: Date | string | null,
-  attentionThreshold: number = 0.8,
-  priorityThreshold: number = 1.0,
-  criticalThreshold: number = 1.25
+  attentionThreshold: number = 0.9,  // Increased from 80% to 90% - less sensitivity
+  priorityThreshold: number = 1.2,   // Increased from 100% to 120% - more tolerance
+  criticalThreshold: number = 1.5    // Increased from 125% to 150% - much rarer critical status
 ): AttentionLevel {
   if (!estimatedCompletionTime) {
     return AttentionLevel.NORMAL;
@@ -110,7 +110,10 @@ export function calculateAttentionLevel(
   const elapsedSeconds = (now.getTime() - orderCreatedAt.getTime()) / 1000;
   const percentComplete = elapsedSeconds / totalEstimatedSeconds;
   
-  // Determine attention level based on percentage of completion
+  // Simple log to debug the calculation (can be removed later)
+  console.log(`Order completion: ${Math.round(percentComplete * 100)}% of estimated time`);
+  
+  // Determine attention level based on percentage of completion with higher thresholds
   if (percentComplete >= criticalThreshold) {
     return AttentionLevel.CRITICAL;
   } else if (percentComplete >= priorityThreshold) {
