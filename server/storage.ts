@@ -303,20 +303,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveOrders(): Promise<OrderSummary[]> {
-    // Active orders are ones that are not CLOSED or CANCELLED
+    // Get ALL orders to display in ALL tabs - both active and closed/served
     const activeOrders = await db
       .select()
       .from(orders)
-      .where(
-        or(
-          eq(orders.status, "PENDING"),
-          eq(orders.status, "NEW"),
-          eq(orders.status, "COOKING"),
-          eq(orders.status, "PLATING"),
-          eq(orders.status, "READY"),
-          eq(orders.status, "SERVED")
-        )
-      )
       .orderBy(asc(orders.createdAt));
 
     const summaries = await Promise.all(

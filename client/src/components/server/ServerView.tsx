@@ -101,11 +101,6 @@ export default function ServerView() {
       return orderStatus === 'CLOSED';
     }
     
-    // For all other tabs, exclude completed orders
-    if (['SERVED', 'CLOSED'].includes(orderStatus)) {
-      return false;
-    }
-    
     // Special filter for delayed orders
     if (statusFilter === 'DELAYED') {
       return order.isDelayed;
@@ -116,9 +111,10 @@ export default function ServerView() {
       return orderStatus === 'NEW';
     }
     
-    // For ALL tab, show all active orders except completed ones
+    // For ALL tab, show all active orders (NEW, COOKING, PLATING, READY, SERVED)
+    // but exclude CLOSED and CANCELLED
     if (statusFilter === 'ALL') {
-      return !['SERVED', 'CLOSED', 'CANCELLED'].includes(orderStatus);
+      return !['CLOSED', 'CANCELLED'].includes(orderStatus);
     }
     
     // Default: match by status
