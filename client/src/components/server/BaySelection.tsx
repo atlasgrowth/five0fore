@@ -163,9 +163,12 @@ export default function BaySelection({ onBayClick }: BaySelectionProps) {
       typeStyle = 'border-purple-300';
     }
 
+    // Use the base color from our bayColour function for more consistent coloring
+    const finalStatusStyle = baseColorClass || statusStyle;
+    
     return (
       <div 
-        className={`${baseStyle} ${statusStyle} ${typeStyle} ${baseColorClass}`}
+        className={`${baseStyle} ${finalStatusStyle} ${typeStyle}`}
         onClick={() => onBayClick && onBayClick(bay.id)}
       >
         {/* Floor indicator */}

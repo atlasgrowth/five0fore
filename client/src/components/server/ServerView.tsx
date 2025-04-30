@@ -28,6 +28,11 @@ export default function ServerView() {
   const { data: orders = [], isLoading: ordersLoading } = useQuery<OrderSummary[]>({
     queryKey: ['/api/orders'],
   });
+  
+  // Also explicitly query for bays to ensure we have the latest data
+  const { data: bays = [] } = useQuery({
+    queryKey: ['/api/bays'],
+  });
 
   // Handle WebSocket messages
   useEffect(() => {
@@ -71,6 +76,21 @@ export default function ServerView() {
         title: 'Order Closed',
         description: `Order #${lastMessage.data.id} has been closed.`,
       });
+    }
+    // Handle bay updated message
+    else if (lastMessage?.type === 'bay_updated') {
+      console.log('Bay updated in ServerView:', lastMessage.data.bay);
+      
+      // Update the bays cache directly
+      queryClient.setQueryData(['/api/bays'], (oldData: any[] | undefined) => {
+        if (!oldData) return oldData;
+        return oldData.map(bay => 
+          bay.id === lastMessage.data.bay.id ? lastMessage.data.bay : bay
+        );
+      });
+      
+      // Also invalidate bays query to ensure a refresh
+      queryClient.invalidateQueries({ queryKey: ['/api/bays'] });
     }
   }, [lastMessage, queryClient, orders, toast]);
 
