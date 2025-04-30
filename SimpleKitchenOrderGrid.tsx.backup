@@ -431,7 +431,7 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
             <div className="flex space-x-6 overflow-x-auto pb-2">
               {/* NEW orders first */}
               {ordersByStatus.new.map((order) => (
-                <div key={order.id} className="min-w-[320px] max-w-[320px] flex-shrink-0">
+                <div key={order.id} className="min-w-[380px] max-w-[380px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -443,7 +443,7 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
 
               {/* Then COOKING orders */}
               {ordersByStatus.cooking.map((order) => (
-                <div key={order.id} className="min-w-[320px] max-w-[320px] flex-shrink-0">
+                <div key={order.id} className="min-w-[380px] max-w-[380px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -472,7 +472,7 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
           ) : (
             <div className="flex space-x-6 overflow-x-auto pb-2">
               {ordersByStatus.plating.map((order) => (
-                <div key={order.id} className="min-w-[320px] max-w-[320px] flex-shrink-0">
+                <div key={order.id} className="min-w-[380px] max-w-[380px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -501,7 +501,7 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
           ) : (
             <div className="flex space-x-6 overflow-x-auto pb-2">
               {ordersByStatus.ready.map((order) => (
-                <div key={order.id} className="min-w-[320px] max-w-[320px] flex-shrink-0">
+                <div key={order.id} className="min-w-[380px] max-w-[380px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -530,7 +530,7 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
           ) : (
             <div className="flex space-x-6 overflow-x-auto pb-2">
               {ordersByStatus.served.map((order) => (
-                <div key={order.id} className="min-w-[320px] max-w-[320px] flex-shrink-0">
+                <div key={order.id} className="min-w-[380px] max-w-[380px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -559,7 +559,7 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
           ) : (
             <div className="flex space-x-6 overflow-x-auto pb-2">
               {ordersByStatus.closed.map((order) => (
-                <div key={order.id} className="min-w-[320px] max-w-[320px] flex-shrink-0">
+                <div key={order.id} className="min-w-[380px] max-w-[380px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -714,16 +714,16 @@ function OrderCard({
                   key={item.id}
                   data-item-id={item.id}
                   className={cn(
-                    "flex items-center p-1 mb-1 border-b text-xs",
+                    "flex justify-between p-1 mb-1 border-b text-xs",
                     item.status === OrderItemStatus.COOKING && "border-l-2 border-l-yellow-500",
                     item.status === OrderItemStatus.PLATING && "border-l-2 border-l-purple-500",
                     item.status === OrderItemStatus.READY && "border-l-2 border-l-green-500",
                     item.status === OrderItemStatus.DELIVERED && "border-l-2 border-l-blue-500"
                   )}
                 >
-                  <div className="flex items-center flex-grow">
+                  <div className="flex items-center">
                     <Checkbox 
-                      className="h-3 w-3 rounded mr-1 border border-neutral-300 flex-shrink-0"
+                      className="h-3 w-3 rounded mr-1 border border-neutral-300"
                       checked={
                         item.status === OrderItemStatus.COOKING || 
                         item.status === OrderItemStatus.PLATING || 
@@ -734,11 +734,11 @@ function OrderCard({
                         toggleItemCompletion(item.id, checked === true, item.status)
                       }
                     />
-                    <div className="flex-grow">
-                      <div className="flex justify-between items-center w-full">
+                    <div className="flex flex-col">
+                      <div className="flex items-center">
                         <div className="flex items-center">
-                          <span className="text-xs font-medium whitespace-nowrap truncate max-w-[120px]">{item.quantity}x {item.menuItem?.name}</span>
-                          <span className="ml-1 text-xs text-gray-500 whitespace-nowrap">
+                          <span className="text-xs font-medium">{item.quantity}x {item.menuItem?.name}</span>
+                          <span className="ml-1 text-xs text-gray-500">
                             ({Math.round((item.cookSeconds || item.menuItem?.prep_seconds || 0) / 60)}m)
                           </span>
                         </div>
