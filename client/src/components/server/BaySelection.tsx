@@ -7,6 +7,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SeatingType } from "@shared/schema";
 
+// Bay color helper function to ensure consistent coloring based on status
+export function bayColour(status: string) {
+  switch (status) {
+    case "NEW":
+      return "bg-blue-100";
+    case "COOKING":
+      return "bg-yellow-200";
+    case "PLATING":
+      return "bg-purple-200";
+    case "READY":
+      return "bg-green-200";
+    default:
+      return "bg-gray-100";
+  }
+}
+
 interface BaySelectionProps {
   onBayClick?: (bayId: number) => void;
 }
@@ -89,7 +105,10 @@ export default function BaySelection({ onBayClick }: BaySelectionProps) {
     let statusStyle = '';
     const lowercaseStatus = bay.status.toLowerCase();
 
-    // Handle both old status names and new status names for backward compatibility
+    // First, use the bayColour function for consistent coloring
+    const baseColorClass = bayColour(bay.status);
+    
+    // Then enhance with gradients for visual appeal
     switch(lowercaseStatus) {
       // Blue - New orders
       case 'active':
@@ -146,7 +165,7 @@ export default function BaySelection({ onBayClick }: BaySelectionProps) {
 
     return (
       <div 
-        className={`${baseStyle} ${statusStyle} ${typeStyle}`}
+        className={`${baseStyle} ${statusStyle} ${typeStyle} ${baseColorClass}`}
         onClick={() => onBayClick && onBayClick(bay.id)}
       >
         {/* Floor indicator */}

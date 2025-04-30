@@ -1,0 +1,80 @@
+Below is (1) why the bay-card colours still don’t change, (2) a full-file fix that will make them update live, and (3) a quick roadmap for what to tackle next.
+
+1  Why the card never leaves blue/grey
+Your back-end does broadcast bay_updated every time you call recalcBayStatus.
+I can see those messages in the logs:
+
+bash
+Copy
+Edit
+{"type":"bay_updated","data":{"bay":{ id:"...", status:"COOKING", ... }}}
+The React side never listens for that message.
+use-websocket.ts only switches on 'ordersUpdate', 'order_updated', etc.;
+it ignores 'bay_updated', so the React-Query cache for ['bays'] never mutates and the cards stay in their initial state.
+
+2  Drop-in fix (two files)
+2-A client/src/hooks/use-websocket.ts — replace whole file
+tsx
+Copy
+Edit
+import { useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+
+export function useWebSocket(url: string) {
+  const qc = useQueryClient();
+  const wsRef = useRef<null | WebSocket>(null);
+
+  useEffect(() => {
+    const ws = new WebSocket(url);
+    wsRef.current = ws;
+
+    ws.onmessage = (evt) => {
+      const msg = JSON.parse(evt.data);
+
+      switch (msg.type) {
+        case "ordersUpdate":
+          qc.setQueryData(["orders", "all"], msg.data);
+          break;
+
+        case "order_updated":
+          qc.invalidateQueries({ queryKey: ["orders"] });
+          break;
+
+        /* ── NEW: live bay colour update ───────────────────────────── */
+        case "bay_updated": {
+          qc.setQueryData(["bays"], (old: any[] | undefined) => {
+            if (!old) return old;
+            return old.map((b) =>
+              b.id === msg.data.bay.id ? msg.data.bay : b
+            );
+          });
+          break;
+        }
+        /* ──────────────────────────────────────────────────────────── */
+      }
+    };
+
+    return () => ws.close();
+  }, [url, qc]);
+}
+2-B client/src/components/server/BaySelection.tsx
+(only the colour helper—rest of file stays the same)
+
+tsx
+Copy
+Edit
+export function bayColour(status: string) {
+  switch (status) {
+    case "NEW":
+      return "bg-blue-100";
+    case "COOKING":
+      return "bg-yellow-200";
+    case "PLATING":
+      return "bg-purple-200";
+    case "READY":
+      return "bg-green-200";
+    default:
+      return "bg-gray-100";
+  }
+}
+Make sure each card’s wrapper class uses bayColour(bay.status).

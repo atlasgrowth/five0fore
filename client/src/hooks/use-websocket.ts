@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface WebSocketHook {
   lastMessage: any;
@@ -10,6 +11,7 @@ export const useWebSocket = (bayId?: number): WebSocketHook => {
   const [lastMessage, setLastMessage] = useState<any>(null);
   const [readyState, setReadyState] = useState<number>(WebSocket.CONNECTING);
   const socketRef = useRef<WebSocket | null>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     try {
@@ -57,6 +59,26 @@ export const useWebSocket = (bayId?: number): WebSocketHook => {
         try {
           const data = JSON.parse(event.data);
           setLastMessage(data);
+
+          // Handle different message types
+          switch (data.type) {
+            case 'ordersUpdate':
+              queryClient.setQueryData(['/api/orders', 'all'], data.data);
+              break;
+              
+            case 'order_updated':
+              queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+              break;
+              
+            // Handle bay status updates to ensure live color updates
+            case 'bay_updated':
+              console.log('Bay updated:', data.data.bay);
+              queryClient.setQueryData(['/api/bays'], (old: any[] | undefined) => {
+                if (!old) return old;
+                return old.map(b => b.id === data.data.bay.id ? data.data.bay : b);
+              });
+              break;
+          }
         } catch (error) {
           console.error("Error parsing WebSocket message:", error);
         }
@@ -78,7 +100,7 @@ export const useWebSocket = (bayId?: number): WebSocketHook => {
       console.error("Failed to establish WebSocket connection:", error);
       return () => {};
     }
-  }, [bayId]);
+  }, [bayId, queryClient]);
 
   const sendMessage = useCallback((data: any) => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
