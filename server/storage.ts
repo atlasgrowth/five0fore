@@ -62,6 +62,14 @@ export interface IStorage {
   markReady(id: string): Promise<OrderItem | undefined>;
   markDelivered(id: string): Promise<OrderItem | undefined>;
   autoFlipReady(): Promise<OrderItem[]>;
+  
+  // Optimized combined operations
+  markItemPlatingWithContext(id: string): Promise<{
+    updatedItem: OrderItem | undefined;
+    order: Order | undefined;
+    bay: Bay | undefined;
+    updatedOrderStatus?: string;
+  }>;
 
   // New methods for enhanced status tracking
   fireOrderItem(id: string): Promise<OrderItem | undefined>; // Sets status to COOKING and captures firedAt timestamp
@@ -982,6 +990,139 @@ export class DatabaseStorage implements IStorage {
 
   async markPlating(id: string): Promise<OrderItem | undefined> {
     return this.markOrderItemPlating(id);
+  }
+  
+  // Optimized method that performs all required operations for plating in a single method
+  // This reduces the number of database calls and provides all context needed for WebSocket updates
+  async markItemPlatingWithContext(id: string): Promise<{
+    updatedItem: OrderItem | undefined;
+    order: Order | undefined;
+    bay: Bay | undefined;
+    updatedOrderStatus?: string;
+  }> {
+    // Get the order item with a single query
+    const [orderItem] = await db
+      .select()
+      .from(orderItems)
+      .where(eq(orderItems.id, id));
+      
+    if (!orderItem) {
+      console.warn(`Cannot mark plating - order item ${id} not found`);
+      return { updatedItem: undefined, order: undefined, bay: undefined };
+    }
+    
+    if (orderItem.status !== OrderItemStatus.COOKING) {
+      console.warn(`Cannot transition item ${id} to PLATING because its status is ${orderItem.status}`);
+      return { 
+        updatedItem: orderItem, 
+        order: undefined, 
+        bay: undefined,
+        updatedOrderStatus: undefined
+      };
+    }
+    
+    // Get the menu item to ensure we have the station (if needed)
+    let station = orderItem.station;
+    if (!station) {
+      const menuItem = await this.getMenuItemById(orderItem.menuItemId);
+      station = menuItem ? menuItem.station : null;
+    }
+    
+    try {
+      // 1. Update the order item status
+      const [updatedItem] = await db
+        .update(orderItems)
+        .set({
+          status: OrderItemStatus.PLATING,
+          platingAt: new Date(),
+          readyAt: new Date(Date.now() + 120 * 1000), // 2 minutes from now
+          station: station || undefined,
+          completed: false
+        })
+        .where(eq(orderItems.id, id))
+        .returning();
+      
+      if (!updatedItem) {
+        console.error(`Failed to update order item ${id} to PLATING status`);
+        return { updatedItem: undefined, order: undefined, bay: undefined };
+      }
+      
+      // 2. Get all items for this order in a single query to determine order status
+      const items = await db
+        .select()
+        .from(orderItems)
+        .where(eq(orderItems.orderId, orderItem.orderId));
+      
+      // 3. Determine the new order status based on all items
+      let newOrderStatus = OrderStatus.NEW;
+      
+      const hasCookingItems = items.some(item => item.status === OrderItemStatus.COOKING);
+      if (hasCookingItems) {
+        newOrderStatus = OrderStatus.COOKING;
+      } else {
+        const hasPlatingItems = items.some(item => item.status === OrderItemStatus.PLATING);
+        const hasNewItems = items.some(item => item.status === OrderItemStatus.NEW || item.status === null);
+        
+        if (hasPlatingItems && !hasNewItems) {
+          newOrderStatus = OrderStatus.PLATING;
+        } else {
+          const allReadyOrDelivered = items.every(item => 
+            item.status === OrderItemStatus.READY || 
+            item.status === OrderItemStatus.DELIVERED
+          );
+          const hasReadyItems = items.some(item => item.status === OrderItemStatus.READY);
+          
+          if (allReadyOrDelivered && hasReadyItems) {
+            newOrderStatus = OrderStatus.READY;
+          } else if (items.every(item => item.status === OrderItemStatus.DELIVERED)) {
+            newOrderStatus = OrderStatus.SERVED;
+          }
+        }
+      }
+      
+      // 4. Update the order status if needed
+      const [order] = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.id, orderItem.orderId));
+        
+      if (!order) {
+        console.error(`Order ${orderItem.orderId} not found for item ${id}`);
+        return { 
+          updatedItem, 
+          order: undefined, 
+          bay: undefined,
+          updatedOrderStatus: newOrderStatus
+        };
+      }
+      
+      // Only update if status changed
+      let updatedOrder = order;
+      if (order.status !== newOrderStatus) {
+        [updatedOrder] = await db
+          .update(orders)
+          .set({ status: newOrderStatus })
+          .where(eq(orders.id, order.id))
+          .returning();
+      }
+      
+      // 5. Get the bay info for WebSocket updates
+      const [bay] = await db
+        .select()
+        .from(bays)
+        .where(eq(bays.id, updatedOrder.bayId));
+        
+      // Return all context for the caller
+      return {
+        updatedItem,
+        order: updatedOrder,
+        bay: bay || undefined,
+        updatedOrderStatus: newOrderStatus
+      };
+    } catch (error) {
+      console.error(`Error in markItemPlatingWithContext for item ${id}:`, error);
+      return { updatedItem: undefined, order: undefined, bay: undefined };
+    }
   }
 
   async markReady(id: string): Promise<OrderItem | undefined> {
