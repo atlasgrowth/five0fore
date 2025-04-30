@@ -1,0 +1,350 @@
+~/workspace$ git rebase --abort
+warning: could not read '.git/rebase-merge/head-name': No such file or directory
+~/workspace$ git reset --hard HEAD
+fatal: Unable to create '/home/runner/workspace/.git/index.lock': File exists.
+
+Another git process seems to be running in this repository, e.g.
+an editor opened by 'git commit'. Please make sure all processes
+are terminated then try again. If it still fails, a git process
+may have crashed in this repository earlier:
+remove the file manually to continue.
+~/workspace$ git reset --hard HEAD
+fatal: Unable to create '/home/runner/workspace/.git/index.lock': File exists.
+
+Another git process seems to be running in this repository, e.g.
+an editor opened by 'git commit'. Please make sure all processes
+are terminated then try again. If it still fails, a git process
+may have crashed in this repository earlier:
+remove the file manually to continue.
+~/workspace$ ps aux | grep git
+~/workspace$ rm -f /home/runner/workspace/.git/index.lock
+~/workspace$ git rebase --abort
+warning: could not read '.git/rebase-merge/head-name': No such file or directory
+~/workspace$ git remote remove origin
+git remote add origin https://github.com/atlasgrowth/five0fore.git
+error: could not lock config file .git/config: File exists
+fatal: could not unset 'branch.main.remote'
+error: remote origin already exists.
+~/workspace$ rm -f /home/runner/workspace/.git/index.lock
+~/workspace$ git remote remove origin
+error: could not lock config file .git/config: File exists
+fatal: could not unset 'branch.main.remote'
+~/workspace$ # Remove the entire .git directory (this will delete your git history)
+rm -rf .git
+
+# Initialize a fresh git repository
+git init
+
+# Add all your files
+git add .
+
+# Make your first commit
+git commit -m "Initial commit of project"
+
+# Add your new GitHub repository as the remote
+git remote add origin https://github.com/atlasgrowth/five0fore.git
+
+# Push to GitHub
+git push -u origin main
+Initialized empty Git repository in /home/runner/workspace/.git/
+[main (root-commit) f819778] Initial commit of project
+ 281 files changed, 31275 insertions(+)
+ create mode 100644 .env.example
+ create mode 100644 .gitignore
+ create mode 100644 .replit
+ create mode 100644 README.md
+ create mode 100644 apps/guest-web/package.json
+ create mode 100644 apps/guest-web/src/App.tsx
+ create mode 100644 apps/guest-web/src/hooks/use-websocket.ts
+ create mode 100644 apps/guest-web/src/index.css
+ create mode 100644 apps/guest-web/src/lib/queryClient.ts
+ create mode 100644 apps/guest-web/src/main.tsx
+ create mode 100644 apps/kitchen-kds/package.json
+ create mode 100644 apps/kitchen-kds/src/App.tsx
+ create mode 100644 apps/kitchen-kds/src/hooks/use-websocket.ts
+ create mode 100644 apps/kitchen-kds/src/index.css
+ create mode 100644 apps/kitchen-kds/src/lib/queryClient.ts
+ create mode 100644 apps/kitchen-kds/src/main.tsx
+ create mode 100644 apps/server-tablet/package.json
+ create mode 100644 apps/server-tablet/src/App.tsx
+ create mode 100644 apps/server-tablet/src/hooks/use-websocket.ts
+ create mode 100644 apps/server-tablet/src/index.css
+ create mode 100644 apps/server-tablet/src/lib/queryClient.ts
+ create mode 100644 apps/server-tablet/src/main.tsx
+ create mode 100644 attached_assets/Pasted--Goal-Ship-a-functional-Kitchen-Display-apps-kitchen-kds-and-wire-status-propagation-end-t-1745598023251.txt
+ create mode 100644 attached_assets/Pasted--PRICE-COMPLETED-STATUS-HOTFIX-Goal-Kitchen-Se-1745609749676.txt
+ create mode 100644 attached_assets/Pasted--TASK-PAC-1745693138001.txt
+ create mode 100644 attached_assets/Pasted-BEGIN-SPRING-CLEAN-WORKFLOW-UPGRADE-T-1745603892742.txt
+ create mode 100644 attached_assets/Pasted-Below-is-a-working-menu-draft-for-Creole-Tavern-plus-a-tech-task-roadmap-that-turns-your-nar-1745600412005.txt
+ create mode 100644 attached_assets/Pasted-Copy-paste-THIS-straight-into-Replit-AI-Everything-below-the-line-is-code-agent-instructions-no-e-1745592114111.txt
+ create mode 100644 attached_assets/Pasted-I-see-you-re-having-trouble-with-Git-Based-on-the-output-from-your-previous-commands-it-looks-like-1745886362806.txt
+ create mode 100644 attached_assets/Pasted-It-s-absolutely-fantastic-Fantastic-job-So-at-this-point-should-we-work-on-the-whole-delayed-work-1745965338147.txt
+ create mode 100644 attached_assets/Pasted-It-s-absolutely-fantastic-Fantastic-job-So-at-this-point-should-we-work-on-the-whole-delayed-work-1745965392792.txt
+ create mode 100644 attached_assets/Pasted-Okay-so-Thank-you-It-s-working-really-well-Now-what-I-want-to-talk-through-is-um-Well-on-1745952486966.txt
+ create mode 100644 attached_assets/Pasted-Quick-diagnosis-of-what-you-re-seeing-Symptom-in-the-UI-Root-cause-in-the-code-Fix-sketch-Kitchen-p-1745604909464.txt
+ create mode 100644 attached_assets/Pasted-Quick-repo-health-check-Area-What-changed-in-the-latest-push-Verdict-Drizzle-schema-conf-1745590170932.txt
+ create mode 100644 attached_assets/Pasted-SwingEats-is-a-full-stack-digital-ordering-and-kitchen-management-platform-tailored-for-venues-like--1745595944196.txt
+ create mode 100644 attached_assets/Pasted-That-s-significantly-better-thank-you-We-re-getting-close-I-can-taste-it-Now-one-thing-I-would--1745964488593.txt
+ create mode 100644 attached_assets/Pasted-You-are-building-a-full-stack-ordering-system-called-SwingEats-for-a-100-bay-driving-range-bar--1745588217562.txt
+ create mode 100644 attached_assets/Pasted-client-536-WebSocket-connection-to-wss-e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu-worf--1745601453869.txt
+ create mode 100644 attached_assets/screenshot-1745621828262.png
+ create mode 100644 attached_assets/screenshot-1745948996972.png
+ create mode 100644 client/index.html
+ create mode 100644 client/src/App.tsx
+ create mode 100644 client/src/assets/golf-logo.svg
+ create mode 100644 client/src/assets/qr-code.svg
+ create mode 100644 client/src/assets/qr-codes/bay-1.png
+ create mode 100644 client/src/assets/qr-codes/bay-10.png
+ create mode 100644 client/src/assets/qr-codes/bay-100.png
+ create mode 100644 client/src/assets/qr-codes/bay-11.png
+ create mode 100644 client/src/assets/qr-codes/bay-12.png
+ create mode 100644 client/src/assets/qr-codes/bay-13.png
+ create mode 100644 client/src/assets/qr-codes/bay-14.png
+ create mode 100644 client/src/assets/qr-codes/bay-15.png
+ create mode 100644 client/src/assets/qr-codes/bay-16.png
+ create mode 100644 client/src/assets/qr-codes/bay-17.png
+ create mode 100644 client/src/assets/qr-codes/bay-18.png
+ create mode 100644 client/src/assets/qr-codes/bay-19.png
+ create mode 100644 client/src/assets/qr-codes/bay-2.png
+ create mode 100644 client/src/assets/qr-codes/bay-20.png
+ create mode 100644 client/src/assets/qr-codes/bay-21.png
+ create mode 100644 client/src/assets/qr-codes/bay-22.png
+ create mode 100644 client/src/assets/qr-codes/bay-23.png
+ create mode 100644 client/src/assets/qr-codes/bay-24.png
+ create mode 100644 client/src/assets/qr-codes/bay-25.png
+ create mode 100644 client/src/assets/qr-codes/bay-26.png
+ create mode 100644 client/src/assets/qr-codes/bay-27.png
+ create mode 100644 client/src/assets/qr-codes/bay-28.png
+ create mode 100644 client/src/assets/qr-codes/bay-29.png
+ create mode 100644 client/src/assets/qr-codes/bay-3.png
+ create mode 100644 client/src/assets/qr-codes/bay-30.png
+ create mode 100644 client/src/assets/qr-codes/bay-31.png
+ create mode 100644 client/src/assets/qr-codes/bay-32.png
+ create mode 100644 client/src/assets/qr-codes/bay-33.png
+ create mode 100644 client/src/assets/qr-codes/bay-34.png
+ create mode 100644 client/src/assets/qr-codes/bay-35.png
+ create mode 100644 client/src/assets/qr-codes/bay-36.png
+ create mode 100644 client/src/assets/qr-codes/bay-37.png
+ create mode 100644 client/src/assets/qr-codes/bay-38.png
+ create mode 100644 client/src/assets/qr-codes/bay-39.png
+ create mode 100644 client/src/assets/qr-codes/bay-4.png
+ create mode 100644 client/src/assets/qr-codes/bay-40.png
+ create mode 100644 client/src/assets/qr-codes/bay-41.png
+ create mode 100644 client/src/assets/qr-codes/bay-42.png
+ create mode 100644 client/src/assets/qr-codes/bay-43.png
+ create mode 100644 client/src/assets/qr-codes/bay-44.png
+ create mode 100644 client/src/assets/qr-codes/bay-45.png
+ create mode 100644 client/src/assets/qr-codes/bay-46.png
+ create mode 100644 client/src/assets/qr-codes/bay-47.png
+ create mode 100644 client/src/assets/qr-codes/bay-48.png
+ create mode 100644 client/src/assets/qr-codes/bay-49.png
+ create mode 100644 client/src/assets/qr-codes/bay-5.png
+ create mode 100644 client/src/assets/qr-codes/bay-50.png
+ create mode 100644 client/src/assets/qr-codes/bay-51.png
+ create mode 100644 client/src/assets/qr-codes/bay-52.png
+ create mode 100644 client/src/assets/qr-codes/bay-53.png
+ create mode 100644 client/src/assets/qr-codes/bay-54.png
+ create mode 100644 client/src/assets/qr-codes/bay-55.png
+ create mode 100644 client/src/assets/qr-codes/bay-56.png
+ create mode 100644 client/src/assets/qr-codes/bay-57.png
+ create mode 100644 client/src/assets/qr-codes/bay-58.png
+ create mode 100644 client/src/assets/qr-codes/bay-59.png
+ create mode 100644 client/src/assets/qr-codes/bay-6.png
+ create mode 100644 client/src/assets/qr-codes/bay-60.png
+ create mode 100644 client/src/assets/qr-codes/bay-61.png
+ create mode 100644 client/src/assets/qr-codes/bay-62.png
+ create mode 100644 client/src/assets/qr-codes/bay-63.png
+ create mode 100644 client/src/assets/qr-codes/bay-64.png
+ create mode 100644 client/src/assets/qr-codes/bay-65.png
+ create mode 100644 client/src/assets/qr-codes/bay-66.png
+ create mode 100644 client/src/assets/qr-codes/bay-67.png
+ create mode 100644 client/src/assets/qr-codes/bay-68.png
+ create mode 100644 client/src/assets/qr-codes/bay-69.png
+ create mode 100644 client/src/assets/qr-codes/bay-7.png
+ create mode 100644 client/src/assets/qr-codes/bay-70.png
+ create mode 100644 client/src/assets/qr-codes/bay-71.png
+ create mode 100644 client/src/assets/qr-codes/bay-72.png
+ create mode 100644 client/src/assets/qr-codes/bay-73.png
+ create mode 100644 client/src/assets/qr-codes/bay-74.png
+ create mode 100644 client/src/assets/qr-codes/bay-75.png
+ create mode 100644 client/src/assets/qr-codes/bay-76.png
+ create mode 100644 client/src/assets/qr-codes/bay-77.png
+ create mode 100644 client/src/assets/qr-codes/bay-78.png
+ create mode 100644 client/src/assets/qr-codes/bay-79.png
+ create mode 100644 client/src/assets/qr-codes/bay-8.png
+ create mode 100644 client/src/assets/qr-codes/bay-80.png
+ create mode 100644 client/src/assets/qr-codes/bay-81.png
+ create mode 100644 client/src/assets/qr-codes/bay-82.png
+ create mode 100644 client/src/assets/qr-codes/bay-83.png
+ create mode 100644 client/src/assets/qr-codes/bay-84.png
+ create mode 100644 client/src/assets/qr-codes/bay-85.png
+ create mode 100644 client/src/assets/qr-codes/bay-86.png
+ create mode 100644 client/src/assets/qr-codes/bay-87.png
+ create mode 100644 client/src/assets/qr-codes/bay-88.png
+ create mode 100644 client/src/assets/qr-codes/bay-89.png
+ create mode 100644 client/src/assets/qr-codes/bay-9.png
+ create mode 100644 client/src/assets/qr-codes/bay-90.png
+ create mode 100644 client/src/assets/qr-codes/bay-91.png
+ create mode 100644 client/src/assets/qr-codes/bay-92.png
+ create mode 100644 client/src/assets/qr-codes/bay-93.png
+ create mode 100644 client/src/assets/qr-codes/bay-94.png
+ create mode 100644 client/src/assets/qr-codes/bay-95.png
+ create mode 100644 client/src/assets/qr-codes/bay-96.png
+ create mode 100644 client/src/assets/qr-codes/bay-97.png
+ create mode 100644 client/src/assets/qr-codes/bay-98.png
+ create mode 100644 client/src/assets/qr-codes/bay-99.png
+ create mode 100644 client/src/components/customer/CustomerView.tsx
+ create mode 100644 client/src/components/customer/MenuCard.tsx
+ create mode 100644 client/src/components/customer/MenuCategories.tsx
+ create mode 100644 client/src/components/customer/MenuItems.tsx
+ create mode 100644 client/src/components/customer/OrderSummary.tsx
+ create mode 100644 client/src/components/kitchen/KitchenOrderGrid.tsx
+ create mode 100644 client/src/components/kitchen/KitchenView.tsx
+ create mode 100644 client/src/components/kitchen/OrderPriorityTabs.tsx
+ create mode 100644 client/src/components/server/ActiveOrdersTable.tsx
+ create mode 100644 client/src/components/server/BaySelection.tsx
+ create mode 100644 client/src/components/server/BayTabs.tsx
+ create mode 100644 client/src/components/server/MenuGrid.tsx
+ create mode 100644 client/src/components/server/MenuItemCustomizeModal.tsx
+ create mode 100644 client/src/components/server/ServerFlowDialog.tsx
+ create mode 100644 client/src/components/server/ServerMenuCategories.tsx
+ create mode 100644 client/src/components/server/ServerMenuItems.tsx
+ create mode 100644 client/src/components/server/ServerOrderDialog.tsx
+ create mode 100644 client/src/components/server/ServerOrderDrawer.tsx
+ create mode 100644 client/src/components/server/ServerView.tsx
+ create mode 100644 client/src/components/server/SimpleOrderDrawer.tsx
+ create mode 100644 client/src/components/ui/ElapsedClock.tsx
+ create mode 100644 client/src/components/ui/accordion.tsx
+ create mode 100644 client/src/components/ui/alert-dialog.tsx
+ create mode 100644 client/src/components/ui/alert.tsx
+ create mode 100644 client/src/components/ui/aspect-ratio.tsx
+ create mode 100644 client/src/components/ui/avatar.tsx
+ create mode 100644 client/src/components/ui/badge.tsx
+ create mode 100644 client/src/components/ui/bay-status-badge.tsx
+ create mode 100644 client/src/components/ui/breadcrumb.tsx
+ create mode 100644 client/src/components/ui/button.tsx
+ create mode 100644 client/src/components/ui/calendar.tsx
+ create mode 100644 client/src/components/ui/card.tsx
+ create mode 100644 client/src/components/ui/carousel.tsx
+ create mode 100644 client/src/components/ui/chart.tsx
+ create mode 100644 client/src/components/ui/checkbox.tsx
+ create mode 100644 client/src/components/ui/collapsible.tsx
+ create mode 100644 client/src/components/ui/command.tsx
+ create mode 100644 client/src/components/ui/context-menu.tsx
+ create mode 100644 client/src/components/ui/dialog.tsx
+ create mode 100644 client/src/components/ui/drawer.tsx
+ create mode 100644 client/src/components/ui/dropdown-menu.tsx
+ create mode 100644 client/src/components/ui/form.tsx
+ create mode 100644 client/src/components/ui/hover-card.tsx
+ create mode 100644 client/src/components/ui/input-otp.tsx
+ create mode 100644 client/src/components/ui/input.tsx
+ create mode 100644 client/src/components/ui/label.tsx
+ create mode 100644 client/src/components/ui/menubar.tsx
+ create mode 100644 client/src/components/ui/navigation-menu.tsx
+ create mode 100644 client/src/components/ui/order-status-badge.tsx
+ create mode 100644 client/src/components/ui/pagination.tsx
+ create mode 100644 client/src/components/ui/popover.tsx
+ create mode 100644 client/src/components/ui/progress.tsx
+ create mode 100644 client/src/components/ui/radio-group.tsx
+ create mode 100644 client/src/components/ui/resizable.tsx
+ create mode 100644 client/src/components/ui/scroll-area.tsx
+ create mode 100644 client/src/components/ui/select.tsx
+ create mode 100644 client/src/components/ui/separator.tsx
+ create mode 100644 client/src/components/ui/sheet.tsx
+ create mode 100644 client/src/components/ui/sidebar.tsx
+ create mode 100644 client/src/components/ui/skeleton.tsx
+ create mode 100644 client/src/components/ui/slider.tsx
+ create mode 100644 client/src/components/ui/switch.tsx
+ create mode 100644 client/src/components/ui/table.tsx
+ create mode 100644 client/src/components/ui/tabs.tsx
+ create mode 100644 client/src/components/ui/textarea.tsx
+ create mode 100644 client/src/components/ui/timer-badge.tsx
+ create mode 100644 client/src/components/ui/timer-display.tsx
+ create mode 100644 client/src/components/ui/toast.tsx
+ create mode 100644 client/src/components/ui/toaster.tsx
+ create mode 100644 client/src/components/ui/toggle-group.tsx
+ create mode 100644 client/src/components/ui/toggle.tsx
+ create mode 100644 client/src/components/ui/tooltip.tsx
+ create mode 100644 client/src/contexts/OrderContext.tsx
+ create mode 100644 client/src/hooks/use-mobile.tsx
+ create mode 100644 client/src/hooks/use-toast.ts
+ create mode 100644 client/src/hooks/use-websocket.ts
+ create mode 100644 client/src/index.css
+ create mode 100644 client/src/lib/queryClient.ts
+ create mode 100644 client/src/lib/utils.ts
+ create mode 100644 client/src/main.tsx
+ create mode 100644 client/src/pages/customer.tsx
+ create mode 100644 client/src/pages/home.tsx
+ create mode 100644 client/src/pages/kitchen.tsx
+ create mode 100644 client/src/pages/not-found.tsx
+ create mode 100644 client/src/pages/server.tsx
+ create mode 100644 client/src/types/menu.ts
+ create mode 100644 client/src/utils/formatting.ts
+ create mode 100644 components.json
+ create mode 100644 docker-compose.yml
+ create mode 100644 drizzle.config.ts
+ create mode 100644 generated-icon.png
+ create mode 100644 inspect_menu.js
+ create mode 100644 menu_response.json
+ create mode 100644 migrations/0000_glorious_nomad.sql
+ create mode 100644 migrations/meta/0000_snapshot.json
+ create mode 100644 migrations/meta/_journal.json
+ create mode 100644 package-lock.json
+ create mode 100644 package.json
+ create mode 100644 pnpm-workspace.yaml
+ create mode 100644 postcss.config.js
+ create mode 100644 scripts/creole-tavern-menu.csv
+ create mode 100755 scripts/dev.js
+ create mode 100644 scripts/generateQRCodes.ts
+ create mode 100644 scripts/importMenu.ts
+ create mode 100644 scripts/menu.json
+ create mode 100644 scripts/run-migration.ts
+ create mode 100755 scripts/seed-db.js
+ create mode 100644 scripts/seedBays.ts
+ create mode 100644 scripts/seedCategories.ts
+ create mode 100644 scripts/seedMenu.ts
+ create mode 100644 server/constants.ts
+ create mode 100644 server/db-migration.ts
+ create mode 100644 server/db-storage.ts
+ create mode 100644 server/db.ts
+ create mode 100644 server/dto.ts
+ create mode 100644 server/index.ts
+ create mode 100644 server/migrations/01_add_progress_tracking.sql
+ create mode 100644 server/migrations/add-kitchen-timing-fields.ts
+ create mode 100644 server/migrations/add-order-item-status-fields.ts
+ create mode 100644 server/migrations/add-seating-type-fields.ts
+ create mode 100644 server/migrations/add_customizations_column.ts
+ create mode 100644 server/routes.ts
+ create mode 100644 server/run-migration.ts
+ create mode 100644 server/storage-adapter.ts.backup
+ create mode 100644 server/storage.db.ts
+ create mode 100644 server/storage.mem.ts.backup
+ create mode 100644 server/storage.ts
+ create mode 100644 server/storage.ts.backup
+ create mode 100644 server/timers.ts
+ create mode 100644 server/vite.ts
+ create mode 100644 server/ws.ts
+ create mode 100644 shared/schema.ts
+ create mode 100644 shared/types.ts
+ create mode 100644 tailwind.config.ts
+ create mode 100644 tsconfig.json
+ create mode 100644 vite.config.ts
+ create mode 100644 workspace-package.json
+remote: Support for password authentication was removed on August 13, 2021.
+remote: Please see https://docs.github.com/get-started/getting-started-with-git/about-remote-repositories#cloning-with-https-urls for information on currently recommended modes of authentication.
+fatal: Authentication failed for 'https://github.com/atlasgrowth/five0fore.git/'
+~/workspace$ git push
+fatal: The current branch main has no upstream branch.
+To push the current branch and set the remote as upstream, use
+
+    git push --set-upstream origin main
+
+To have this happen automatically for branches without a tracking
+upstream, see 'push.autoSetupRemote' in 'git help config'.
+
+~/workspace$ ^C
+~/workspace$  git push --set-upstream origin main
+remote: Support for password authentication was removed on August 13, 2021.
+remote: Please see https://docs.github.com/get-started/getting-started-with-git/about-remote-repositories#cloning-with-https-urls for information on currently recommended modes of authentication.
+fatal: Authentication failed for 'https://github.com/atlasgrowth/five0fore.git/'
+~/workspace$ 
