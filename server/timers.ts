@@ -93,12 +93,13 @@ export function startKitchenTimers() {
   }
   statusSyncTimerId = setInterval(synchronizeBayStatus, 3000);
   
-  // Temporarily disable automatic order time recalculation as it's causing performance issues
-  // We'll let users manually update times as needed
+  // Re-enable automatic order time recalculation with a longer interval
+  // to reduce performance impact (every 30 seconds instead of more frequently)
   if (timeRecalcTimerId) {
     clearInterval(timeRecalcTimerId);
-    timeRecalcTimerId = null;
   }
+  timeRecalcTimerId = setInterval(recalculateAllOrderTimes, 30000); // 30 seconds
+  console.log('Automatic order time recalculation enabled (30s interval)');
 }
 
 /**
@@ -155,8 +156,7 @@ export async function updateOrderEstimatedCompletionTime(orderId: string) {
     const totalItems = items.length;
     const completedItems = items.filter(item => 
       item.status === OrderItemStatus.READY || 
-      item.status === OrderItemStatus.DELIVERED || 
-      item.status === OrderItemStatus.SERVED // Using enum now that we've defined it
+      item.status === OrderItemStatus.DELIVERED
     ).length;
     
     // Progress from 0.0 (no items done) to 1.0 (all items done)
