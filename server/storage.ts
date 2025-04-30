@@ -75,7 +75,7 @@ export interface IStorage {
 
 // Import database instance and helpers
 import { db, pool } from "./db";
-import { eq, asc, desc, and, or, isNotNull, isNull, lt, notInArray } from "drizzle-orm";
+import { eq, asc, desc, and, or, isNotNull, isNull, lt, notInArray, ne } from "drizzle-orm";
 
 // Implement the Database Storage
 export class DatabaseStorage implements IStorage {
@@ -308,16 +308,13 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(orders)
       .where(
-        and(
-          or(
-            eq(orders.status, "PENDING"),
-            eq(orders.status, "NEW"),
-            eq(orders.status, "COOKING"),
-            eq(orders.status, "PLATING"),
-            eq(orders.status, "READY"),
-            eq(orders.status, "SERVED")
-          ),
-          ne(orders.status, "CLOSED")
+        or(
+          eq(orders.status, "PENDING"),
+          eq(orders.status, "NEW"),
+          eq(orders.status, "COOKING"),
+          eq(orders.status, "PLATING"),
+          eq(orders.status, "READY"),
+          eq(orders.status, "SERVED")
         )
       )
       .orderBy(asc(orders.createdAt));
