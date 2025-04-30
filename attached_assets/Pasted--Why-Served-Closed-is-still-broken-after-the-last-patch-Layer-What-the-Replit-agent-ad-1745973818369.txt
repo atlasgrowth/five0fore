@@ -1,0 +1,121 @@
+### Why “Served → Closed” is still broken after the last patch
+
+| Layer | What the Replit agent added | Hidden mismatch that breaks it |
+|-------|----------------------------|--------------------------------|
+| **Database** | Added `closed_at` column and sets `status = "CLOSED"` | Enum in `shared/schema.ts` is `OrderStatus.SERVED`, `OrderStatus.CANCELLED` – **no `CLOSED` value**, so Drizzle casts it to `unknown`; filters can’t match. |
+| **API filter** `/api/orders?status=CLOSED` | Reuses switch-map that lower-cases the param and compares to enum | Because enum lacks `CLOSED`, the map falls into *“invalid status”* → 400 or returns nothing. |
+| **Client query** | Closed tab calls `useQuery(['orders','closed'], …fetch('/api/orders?status=CLOSED')…)` | Fetch returns 400/empty array → badge never updates. |
+| **WebSocket** | Broadcasts `{ type:'ORDER_CLOSED' }` | Client switches only on `'ordersUpdate'` / `'order_updated'`. The new message is ignored. |
+
+So the UI looks like “button did nothing” even though DB row changed.
+
+---
+
+## Two-step fix (no column renames, minimal disruption)
+
+### Step 1 — Use existing enum value `SERVED` instead of inventing `CLOSED`
+
+* Replace every place we set `"CLOSED"` with `"SERVED"` and use `servedAt` timestamp (you already have it).
+* Remove `/close` endpoint; just have the “$” button call `/order/:id/serve` (it already exists and changes status).
+* Closed tab should filter `status=SERVED`.
+
+### Step 2 — Client cache + badge refresh
+
+* After `$` click invalidate both `['orders','served']` and `['orders','all']`.
+* Closed tab query key should be `['orders','served']` not `['orders','closed']`.
+
+---
+
+## Prompt to give Replit agent (copy-paste)
+
+```
+# =============================================================================
+#  FIX: collapse “CLOSED” into existing SERVED status so Closed tab works
+# -----------------------------------------------------------------------------
+#  Touch only these files:
+#     server/storage.ts       – drop markOrderClosed, reuse markOrderServed
+#     server/routes.ts        – delete /order/:id/close, keep /serve
+#     client/components/server/ActiveOrdersTable.tsx  – $ button -> /serve
+#     client/components/server/ServerView.tsx         – Closed tab uses status=SERVED
+#     client/components/server/BayTabs.tsx            – badge counts use SERVED
+# =============================================================================
+
+######################## 1. storage.ts ########################################
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: server/storage.ts
+-  async markOrderClosed(orderId: string) {
+-    await db
+-      .update(orders)
+-      .set({ status: "CLOSED", closedAt: new Date() })
+-      .where(eq(orders.id, orderId));
+-    return db.query.orders.findFirst({ where: eq(orders.id, orderId) });
+-  },
+*** End Patch
+PATCH
+
+######################## 2. routes.ts #########################################
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: server/routes.ts
+-// close endpoint (remove)
+-router.post("/api/order/:id/close", async (req,res)=>{ … });
+*** End Patch
+PATCH
+
+######################## 3. ActiveOrdersTable ##################################
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: client/src/components/server/ActiveOrdersTable.tsx
+@@
+-  const handleClose = async (id:string)=>{
+-    await apiRequest("POST", `/api/order/${id}/close`);
+-    qc.invalidateQueries({ queryKey:["orders","served"] });
+-    qc.invalidateQueries({ queryKey:["orders","closed"] });
+-  };
++  const handleClose = async (id:string)=>{
++    await apiRequest("POST", `/api/order/${id}/serve`);
++    qc.invalidateQueries({ queryKey:["orders","served"] });
++    qc.invalidateQueries({ queryKey:["orders","all"] });
++  };
+*** End Patch
+PATCH
+
+######################## 4. ServerView tabs ####################################
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: client/src/components/server/ServerView.tsx
+@@
+-const closed = useOrders("closed");   // old
++const closed = useOrders("served");   // served === closed
+*** End Patch
+PATCH
+
+######################## 5. BayTabs badge logic ################################
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: client/src/components/server/BayTabs.tsx
+@@
+-const closed = orders.filter(o=>o.status==="CLOSED").length;
++const closed = orders.filter(o=>o.status==="SERVED").length;
+*** End Patch
+PATCH
+
+######################## 6. delete ORDER_CLOSED WS handling ####################
+# (optional) remove unused ORDER_CLOSED code to avoid confusion
+########################
+
+######################## 7. commit & push ######################################
+pnpm dlx tsc --noEmit
+git add -A
+git commit -m "fix(server): use SERVED status for closed tab; remove obsolete CLOSE flow"
+git push
+```
+
+### After this patch
+
+* Clicking the **$** icon calls the existing `/serve` endpoint → status = SERVED.  
+* Closed tab (`status=SERVED`) populates instantly; badge counts update.  
+* No phantom `"CLOSED"` state, no extra WebSocket type.
+
+Run the flow again—ticket should appear under *Closed* and bay card return to grey. If still blank, tell me the exact status string coming back from `/api/orders` and we’ll match it.
