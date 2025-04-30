@@ -1,0 +1,7 @@
+{
+  "name": "five0fore",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",   // Node + npm
+  "postCreateCommand": "npm install && npx prisma generate",
+  "forwardPorts": [3000, 5555],          // Vite + API
+  "features": { "ghcr.io/devcontainers/features/redis:1": {} }
+}
