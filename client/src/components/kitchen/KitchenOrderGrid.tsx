@@ -497,102 +497,40 @@ function OrderCard({
       )}
     >
       <div className="p-4">
-        <div className="flex justify-between items-start mb-3">
+        {/* TOP ROW: Status on left, Bay number in middle, Order number on right */}
+        <div className="flex justify-between items-center mb-3 border-b pb-2">
+          {/* Left: Status */}
           <div>
-            <div className="flex items-center mb-1">
-              <div className={cn(
-                "w-2 h-2 rounded-full mr-2",
-                order.status === OrderStatus.READY ? "bg-green-500" : 
-                order.status === OrderStatus.PLATING ? "bg-purple-500" :
-                order.status === OrderStatus.COOKING ? "bg-yellow-500" :
-                order.status === OrderStatus.SERVED ? "bg-blue-500" :
-                order.status === OrderStatus.CLOSED ? "bg-gray-500" :
-                order.status === OrderStatus.CANCELLED ? "bg-red-500" :
-                order.isDelayed ? "bg-red-500" : "bg-blue-500"
-              )}></div>
-              <span className={cn(
-                "text-sm font-medium uppercase tracking-wider px-2 py-0.5 rounded",
-                order.status === OrderStatus.READY ? "text-green-700 bg-green-50 border border-green-200" : 
-                order.status === OrderStatus.PLATING ? "text-purple-700 bg-purple-50 border border-purple-200" :
-                order.status === OrderStatus.COOKING ? "text-yellow-700 bg-yellow-50 border border-yellow-200" :
-                order.status === OrderStatus.SERVED ? "text-blue-700 bg-blue-50 border border-blue-200" :
-                order.status === OrderStatus.CLOSED ? "text-gray-700 bg-gray-100 border border-gray-200" :
-                order.status === OrderStatus.CANCELLED ? "text-red-700 bg-red-50 border border-red-200" :
-                order.isDelayed ? "text-red-700 bg-red-50 border border-red-200" : "text-blue-700 bg-blue-50 border border-blue-200"
-              )}>
-                {order.status}
-              </span>
-              
-              {/* Add attention level badge when an order needs attention */}
-              {order.attentionLevel && order.attentionLevel !== AttentionLevel.NORMAL && (
-                <div className="ml-2">
-                  <AttentionLevelBadge 
-                    level={order.attentionLevel}
-                    showIcon={true}
-                    showLabel={false}
-                    compact={true}
-                  />
-                </div>
-              )}
-            </div>
-            <div className="flex items-center mb-1">
-              <span className="text-sm font-medium text-neutral-600 bg-neutral-100 px-2 py-0.5 rounded-md mr-2">
-                #{order.orderNumber}
-              </span>
-              <h3 className="font-poppins font-bold text-lg">Bay {order.bayNumber}</h3>
-              <span className="ml-1 text-sm text-neutral-500">(Floor {order.floor})</span>
-            </div>
-            <p className="text-xs text-neutral-500 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Placed&nbsp;
-              {new Date(order.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
-            </p>
+            <span className={cn(
+              "text-sm font-medium uppercase tracking-wider px-2 py-1 rounded",
+              order.status === OrderStatus.READY ? "text-green-700 bg-green-50 border border-green-200" : 
+              order.status === OrderStatus.PLATING ? "text-purple-700 bg-purple-50 border border-purple-200" :
+              order.status === OrderStatus.COOKING ? "text-yellow-700 bg-yellow-50 border border-yellow-200" :
+              order.status === OrderStatus.SERVED ? "text-blue-700 bg-blue-50 border border-blue-200" :
+              order.status === OrderStatus.CLOSED ? "text-gray-700 bg-gray-100 border border-gray-200" :
+              order.status === OrderStatus.CANCELLED ? "text-red-700 bg-red-50 border border-red-200" :
+              "text-blue-700 bg-blue-50 border border-blue-200"
+            )}>
+              {order.status}
+            </span>
           </div>
-          <div className="flex flex-col items-end">
-            {/* Show estimated completion time */}
-            <div className="text-sm font-medium">
-              {order.estimatedCompletionTime ? (
-                <div className="flex flex-col items-end">
-                  <span className="text-xs text-neutral-500">Est. Completion:</span>
-                  <span className="font-medium">{new Date(order.estimatedCompletionTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
-                </div>
-              ) : (
-                <TimerDisplay createdAt={order.createdAt} />
-              )}
-            </div>
-            
-            {/* Time indicator showing minutes ahead/behind schedule */}
-            {order.estimatedCompletionTime && (
-              <span className={cn(
-                "mt-1 text-xs font-medium px-2 py-0.5 rounded-full",
-                (() => {
-                  // Calculate time difference in minutes
-                  const currentTime = new Date();
-                  const estimatedTime = new Date(order.estimatedCompletionTime);
-                  const diffMs = estimatedTime.getTime() - currentTime.getTime();
-                  const diffMinutes = Math.round(diffMs / 60000);
-                  
-                  // Choose color based on order status first
-                  if (order.status === OrderStatus.READY) return "bg-green-100 text-green-800";
-                  if (order.status === OrderStatus.SERVED) return "bg-blue-100 text-blue-800";
-                  if (order.status === OrderStatus.CLOSED) return "bg-gray-100 text-gray-800";
-                  if (order.status === OrderStatus.CANCELLED) return "bg-red-100 text-red-800";
-                  
-                  // For active orders, choose color based on time difference
-                  // Only 2 options now: On Time (green) or Late (red/amber based on how late)
-                  if (diffMinutes < 0) {
-                    // If late, choose color based on severity
-                    return diffMinutes < -5 
-                      ? "bg-red-100 text-red-800"    // More than 5 min late: Red
-                      : "bg-amber-100 text-amber-800"; // Less than 5 min late: Amber
-                  } else {
-                    // If on time or ahead: always green
-                    return "bg-green-100 text-green-800"; 
-                  }
-                })()
-              )}>
+          
+          {/* Middle: Bay information */}
+          <div className="text-center">
+            <h3 className="font-bold text-lg">Bay {order.bayNumber}</h3>
+          </div>
+          
+          {/* Right: Order number */}
+          <div className="text-right">
+            <span className="text-sm font-medium text-neutral-600 bg-neutral-100 px-2 py-1 rounded-md">
+              #{order.orderNumber}
+            </span>
+          </div>
+        </div>
+        
+        {/* CONTENT AREA */}
+        <div className="mb-3">
+          {/* Order items will go here */}
                 {(() => {
                   // Calculate time difference in minutes
                   const currentTime = new Date();
