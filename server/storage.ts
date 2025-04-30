@@ -828,40 +828,10 @@ export class DatabaseStorage implements IStorage {
 
   // New convenience methods with shorter names for the workflow script
   async markFired(id: string): Promise<OrderItem | undefined> {
-    const updateResult = await db
-      .update(orderItems)
-      .set({
-        status: OrderItemStatus.COOKING,
-        firedAt: new Date(),
-      })
-      .where(eq(orderItems.id, id))
-      .returning();
-
-    if (!updateResult || updateResult.length === 0) {
-      throw new Error(`Failed to update item ${id} to COOKING status`);
-    }
-
-    const item = updateResult[0];
-
-    const getOrderResult = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, item.orderId));
-
-    if (getOrderResult.length === 0) {
-      throw new Error(`Order ${item.orderId} not found`);
-    }
-
-    const order = getOrderResult[0];
-
-    // Broadcast update
-    broadcast(WebSocketMessageType.KITCHEN_ITEM_UPDATE, {
-      order: toBayOrderSummaryDTO(order),
-      item: toOrderItemDTO(item)
-    });
-
-    await this.recalcBayStatus(order.bayId);
-    return item;
+    // Call the more robust fireOrderItem method instead
+    // This ensures we use the same logic and avoid duplicate implementations
+    console.log(`markFired called - forwarding to fireOrderItem for item ${id}`);
+    return this.fireOrderItem(id);
   }
 
   async markPlating(id: string): Promise<OrderItem | undefined> {
@@ -869,40 +839,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async markReady(id: string): Promise<OrderItem | undefined> {
-    const updateResult = await db
-      .update(orderItems)
-      .set({
-        status: OrderItemStatus.READY,
-        readyAt: new Date(),
-      })
-      .where(eq(orderItems.id, id))
-      .returning();
-
-    if (!updateResult || updateResult.length === 0) {
-      throw new Error(`Failed to update item ${id} to READY status`);
-    }
-
-    const item = updateResult[0];
-
-    const getOrderResult = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, item.orderId));
-
-    if (getOrderResult.length === 0) {
-      throw new Error(`Order ${item.orderId} not found`);
-    }
-
-    const order = getOrderResult[0];
-
-    // Broadcast update
-    broadcast(WebSocketMessageType.KITCHEN_ITEM_UPDATE, {
-      order: toBayOrderSummaryDTO(order),
-      item: toOrderItemDTO(item)
-    });
-
-    await this.recalcBayStatus(order.bayId);
-    return item;
+    // Call the more robust markOrderItemReady method instead
+    // This ensures we use the same logic and avoid duplicate implementations
+    console.log(`markReady called - forwarding to markOrderItemReady for item ${id}`);
+    return this.markOrderItemReady(id);
   }
 
   async markDelivered(id: string): Promise<OrderItem | undefined> {
