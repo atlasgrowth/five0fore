@@ -20,9 +20,11 @@ export default function BaySelection({ onBayClick }: BaySelectionProps) {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [filteredBays, setFilteredBays] = useState<any[]>([]);
 
-  // Fetch all bays
+  // Fetch all bays with aggressive polling to ensure colors update
   const { data: bays, isLoading } = useQuery({
     queryKey: ['/api/bays'],
+    // Add aggressive polling every 3 seconds to ensure bay status colors stay updated
+    refetchInterval: 3000,
   });
 
   // Filter bays based on selected criteria
@@ -87,59 +89,9 @@ export default function BaySelection({ onBayClick }: BaySelectionProps) {
     `;
 
     // Status-based styling based on our color coding system
-    let statusStyle = '';
-    const lowercaseStatus = bay.status.toLowerCase();
-
-    // First, use the bayColour function for consistent coloring
-    const baseColorClass = bayColour(bay.status);
+    // ONLY use bayColour utility for consistent coloring across components
+    const finalStatusStyle = bayColour(bay.status);
     
-    // Then enhance with gradients for visual appeal
-    switch(lowercaseStatus) {
-      // Blue - New orders
-      case 'active':
-      case 'new':
-        statusStyle = 'bg-gradient-to-r from-blue-500 to-blue-600 text-white';
-        break;
-
-      // Yellow/Orange - Cooking orders
-      case 'cooking':
-      case 'flagged':  // Legacy status
-        statusStyle = 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white';
-        break;
-
-      // Purple - Plating orders
-      case 'plating':
-      case 'alert':  // Legacy status
-        statusStyle = 'bg-gradient-to-r from-purple-500 to-purple-600 text-white';
-        break;
-
-      // Green - Ready orders
-      case 'ready':
-        statusStyle = 'bg-gradient-to-r from-green-500 to-green-600 text-white';
-        break;
-
-      // Gray - Empty or Served bays
-      case 'empty':
-      case 'occupied': // Legacy status
-      case 'served':
-        statusStyle = 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-800 border-2 border-gray-300 hover:border-gray-400';
-        break;
-
-      // Dark Gray - Closed orders
-      case 'closed':
-        statusStyle = 'bg-gradient-to-r from-gray-500 to-gray-600 text-white';
-        break;
-
-      // Dark Gray - Cancelled orders
-      case 'cancelled':
-        statusStyle = 'bg-gradient-to-r from-neutral-600 to-neutral-700 text-white';
-        break;
-
-      default:
-        statusStyle = 'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-800 border-2 border-gray-300 hover:border-gray-400';
-        break;
-    }
-
     // Type-specific styling
     let typeStyle = 'border-emerald-200';
     if (bay.type === 'BAR_LEFT' || bay.type === 'BAR_RIGHT') {
@@ -147,10 +99,6 @@ export default function BaySelection({ onBayClick }: BaySelectionProps) {
     } else if (bay.type === 'TABLE') {
       typeStyle = 'border-purple-300';
     }
-
-    // ALWAYS use the bayColour function for consistent coloring
-    // DO NOT fall back to statusStyle as this creates inconsistency
-    const finalStatusStyle = baseColorClass;
     
     return (
       <div 

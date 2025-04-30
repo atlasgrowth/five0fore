@@ -25,14 +25,16 @@ export default function ServerView() {
   });
   const [statusFilter, setStatusFilter] = useState("COMPLETE"); // Default to COMPLETE tab to see past orders
 
-  // Get active orders
+  // Get active orders with aggressive polling
   const { data: orders = [], isLoading: ordersLoading } = useQuery<OrderSummary[]>({
     queryKey: ['/api/orders'],
+    refetchInterval: 3000, // Poll every 3 seconds to ensure up-to-date data
   });
   
-  // Also explicitly query for bays to ensure we have the latest data
+  // Also explicitly query for bays with aggressive polling to ensure we have the latest data
   const { data: bays = [] } = useQuery({
     queryKey: ['/api/bays'],
+    refetchInterval: 3000, // Poll every 3 seconds to ensure up-to-date data
   });
 
   // WebSocket messages are now being handled by the useWebSocket hook directly
