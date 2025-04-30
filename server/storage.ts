@@ -303,7 +303,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveOrders(): Promise<OrderSummary[]> {
-    // Active orders are ones that are not SERVED or CANCELLED
+    // Active orders are ones that are not CLOSED or CANCELLED
     const activeOrders = await db
       .select()
       .from(orders)
@@ -316,7 +316,8 @@ export class DatabaseStorage implements IStorage {
             eq(orders.status, "PLATING"),
             eq(orders.status, "READY"),
             eq(orders.status, "SERVED")
-          )
+          ),
+          ne(orders.status, "CLOSED")
         )
       )
       .orderBy(asc(orders.createdAt));

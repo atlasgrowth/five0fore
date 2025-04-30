@@ -579,8 +579,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Update the order status to SERVED and manually set the closedAt timestamp
-      const updatedOrder = await storage.updateOrderStatus(orderId, OrderStatus.SERVED);
+      // Update the order status to CLOSED and set the closedAt timestamp
+      const updatedOrder = await storage.updateOrderStatus(orderId, OrderStatus.CLOSED);
       
       // Also set the closedAt timestamp separately
       if (updatedOrder) {
@@ -599,7 +599,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const activeOrders = bayOrders.filter(order => 
         order.id !== orderId && 
         order.status !== OrderStatus.SERVED && 
-        order.status !== "CANCELLED"
+        order.status !== OrderStatus.CLOSED && 
+        order.status !== OrderStatus.CANCELLED
       );
       
       // If no more active orders, set bay to empty
@@ -629,11 +630,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       broadcastUpdate('ordersUpdate', updatedOrders);
       
       // Additionally broadcast closed orders for the CLOSED tab
-      // This is key to fixing the issue with closed orders not appearing
-      // Use SERVED status with closedAt timestamp for closed orders
-      const servedOrders = await storage.getOrdersByStatus(OrderStatus.SERVED);
-      // Filter to only include orders with closedAt timestamp
-      const closedOrders = servedOrders.filter(order => order.closedAt !== null);
+      // Get orders with CLOSED status
+      const closedOrders = await storage.getOrdersByStatus(OrderStatus.CLOSED);
       broadcastUpdate('closedOrdersUpdate', closedOrders);
       
       if (fullOrder) {
@@ -643,7 +641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data: {
             order: toOrderDTO(updatedOrder),
             items: fullOrder.items.map(item => toOrderItemDTO(item)),
-            status: OrderStatus.SERVED,
+            status: OrderStatus.CLOSED,
             timeElapsed: Math.round((Date.now() - new Date(fullOrder.createdAt).getTime()) / 60000),
             estimatedCompletionTime: fullOrder.estimatedCompletionTime 
               ? new Date(fullOrder.estimatedCompletionTime).toISOString() 
@@ -718,6 +716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const activeOrders = bayOrders.filter(o => 
             o.id !== updatedOrder.id && 
             o.status !== OrderStatus.SERVED && 
+            o.status !== OrderStatus.CLOSED && 
             o.status !== OrderStatus.CANCELLED
           );
           
