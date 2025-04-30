@@ -10,6 +10,8 @@ import {
   OrderItemStatus, OrderStatus, SeatingType
 } from "@shared/schema";
 import * as schema from "@shared/schema";
+import { WebSocketMessageType } from "@shared/types";
+import { toBayDTO, toOrderDTO } from "./dto";
 
 export interface IStorage {
   // Users
@@ -897,6 +899,9 @@ export class DatabaseStorage implements IStorage {
     console.log("Database already initialized!");
   }
   async recalcBayStatus(bayId: string): Promise<void> {
+    // Import the WebSocket functionality dynamically to avoid circular imports
+    const { broadcastUpdate } = await import('./ws');
+    
     const rows = await db.select({ status: orderItems.status })
        .from(orderItems)
        .leftJoin(orders, eq(orders.id, orderItems.orderId))
@@ -912,7 +917,14 @@ export class DatabaseStorage implements IStorage {
 
     await db.update(bays).set({ status: bayStatus }).where(eq(bays.id, bayId));
     const bay = await db.query.bays.findFirst({ where: eq(bays.id, bayId) });
-    broadcast("bay_updated", { bay: toBayDTO(bay) });
+    
+    if (bay) {
+      // Broadcast the bay update to all clients with the correct WebSocket message format
+      broadcastUpdate('bay_updated', { bay: toBayDTO(bay) });
+      console.log(`Broadcasted bay update for bay ${bayId}, new status: ${bayStatus}`);
+    } else {
+      console.error(`Could not find bay with ID ${bayId} to broadcast update`);
+    }
   }
   async markOrderServed(orderId: string) {
     // First, update the order status
@@ -946,8 +958,11 @@ export class DatabaseStorage implements IStorage {
     // Fetch the updated order with items
     const completeOrder = await this.getOrderWithItems(orderId);
 
+    // Import the WebSocket functionality dynamically to avoid circular imports
+    const { broadcastUpdate } = await import('./ws');
+    
     // Broadcast update
-    broadcast(WebSocketMessageType.ORDER_SERVED, {
+    broadcastUpdate('ORDER_SERVED', {
       order: completeOrder,
     });
 
