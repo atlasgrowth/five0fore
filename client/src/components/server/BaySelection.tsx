@@ -6,35 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SeatingType } from "@shared/schema";
-
-// Bay color helper function to ensure consistent coloring based on status
-export function bayColour(status: string) {
-  if (!status) return "bg-gray-100"; // Default for null/undefined
-  
-  const normalizedStatus = status.toUpperCase();
-  
-  switch (normalizedStatus) {
-    case "NEW":
-    case "ACTIVE":
-      return "bg-blue-100";
-    case "COOKING":
-      return "bg-yellow-200";
-    case "PLATING":
-      return "bg-purple-200";
-    case "READY":
-      return "bg-green-200";
-    case "SERVED":
-      return "bg-blue-50";
-    case "CLOSED":
-      return "bg-gray-300";
-    case "EMPTY":
-    case "AVAILABLE":
-      return "bg-gray-100";
-    default:
-      console.log(`Unknown bay status: ${status}, using default color`);
-      return "bg-gray-100";
-  }
-}
+import { bayColour } from "./bayColour";
 
 interface BaySelectionProps {
   onBayClick?: (bayId: number) => void;

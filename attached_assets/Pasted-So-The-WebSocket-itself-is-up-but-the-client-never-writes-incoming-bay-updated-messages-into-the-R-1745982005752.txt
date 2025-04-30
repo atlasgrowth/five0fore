@@ -1,0 +1,103 @@
+So:
+The WebSocket itself is up, but the client never writes incoming bay_updated messages into the React-Query cache that ServerView reads. The colour helper therefore always sees "empty" or the original "NEW".
+
+Two-file fix (full replacements)
+Copy these in exactly, then run pnpm dlx tsc --noEmit and pnpm dev.
+
+1 client/src/hooks/use-websocket.ts
+tsx
+Copy
+Edit
+import { useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+
+/**
+ * Opens ONE WebSocket (no localhost fallback) and commits
+ * bay/order updates straight into React-Query caches.
+ */
+export function useWebSocket() {
+  const qc = useQueryClient();
+  const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    // same origin, just replace http -> ws and append /ws
+    const base =
+      window.location.origin.replace(/^http/, "ws") + "/ws?client=server-app";
+    const ws = new WebSocket(base);
+    wsRef.current = ws;
+
+    ws.onmessage = (evt) => {
+      const msg = JSON.parse(evt.data);
+
+      switch (msg.type) {
+        case "ordersUpdate":
+          qc.setQueryData(["orders", "all"], msg.data);
+          break;
+
+        case "order_updated":
+          qc.invalidateQueries({ queryKey: ["orders"] });
+          break;
+
+        /* --- NEW: keep bay cache in sync ------------------------- */
+        case "bay_updated": {
+          const bay = msg.data.bay;
+          qc.setQueryData(["bays"], (old: any[] | undefined) =>
+            !old ? old : old.map((b) => (b.id === bay.id ? bay : b))
+          );
+          break;
+        }
+        /* --------------------------------------------------------- */
+      }
+    };
+
+    return () => ws.close();
+  }, [qc]);
+}
+2 client/src/components/server/BaySelection.tsx
+tsx
+Copy
+Edit
+import { useQuery } from "@tanstack/react-query";
+import { bayColour } from "./bayColour";
+import { apiRequest } from "@/lib/queryClient";
+
+export default function BaySelection() {
+  const { data: bays } = useQuery({
+    queryKey: ["bays"],
+    queryFn: () => apiRequest("GET", "/api/bays").then((r) => r.json()),
+    refetchInterval: 60000,
+  });
+
+  if (!bays) return null;
+
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      {bays.map((bay: any) => (
+        <button
+          key={bay.id}
+          className={`p-3 rounded ${bayColour(bay.status)} shadow`}
+        >
+          <p className="font-bold">Bay {bay.number}</p>
+          <p className="text-xs">{bay.status.toLowerCase()}</p>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* helper kept in same file for clarity */
+function bayColour(status: string) {
+  switch (status) {
+    case "NEW":
+      return "bg-blue-100";
+    case "COOKING":
+      return "bg-yellow-200";
+    case "PLATING":
+      return "bg-purple-200";
+    case "READY":
+      return "bg-green-200";
+    default:
+      return "bg-gray-100";
+  }
+}
+No other code changes needed—the server already broadcasts bay_updated, now the client actually consumes it, and the card background will flip yellow/purple/green within a second of the kitchen tap.

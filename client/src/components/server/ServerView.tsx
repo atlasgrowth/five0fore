@@ -15,7 +15,8 @@ import { OrderSummary } from "@shared/schema";
 export default function ServerView() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { lastMessage } = useWebSocket();
+  // Initialize WebSocket connection for real-time updates
+  useWebSocket(); // No need to destructure as we're using React Query for state
   const [serverName, setServerName] = useState("Alex Johnson");
   const [drawer, setDrawer] = useState<{ open: boolean, bayId: number | null, viewExistingOrders: boolean }>({ 
     open: false, 
@@ -34,65 +35,9 @@ export default function ServerView() {
     queryKey: ['/api/bays'],
   });
 
-  // Handle WebSocket messages
-  useEffect(() => {
-    if (lastMessage?.type === 'ordersUpdate') {
-      const ordersData = lastMessage.data as OrderSummary[];
-      
-      // Store current order IDs before updating data
-      const currentOrderIds = new Set(orders?.map(order => order.id) || []);
-      
-      // Update the query data
-      queryClient.setQueryData(['/api/orders'], ordersData);
-      
-      // Find truly new orders by checking for IDs that didn't exist before
-      const newOrders = ordersData.filter(order => 
-        !currentOrderIds.has(order.id) && order.status === 'NEW'
-      );
-      
-      // Only notify for actual new orders, not status changes
-      if (newOrders.length > 0) {
-        toast({
-          title: 'New Order Received',
-          description: `A new order has been placed.`,
-        });
-      }
-    } 
-    // Handle closed orders update message
-    else if (lastMessage?.type === 'closedOrdersUpdate') {
-      // Update the query cache with the latest orders
-      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
-      
-      // No need to show a notification for closed orders updates
-      // as they are shown in the CLOSED tab
-    }
-    // Handle single order closed message
-    else if (lastMessage?.type === 'ORDER_CLOSED') {
-      // Invalidate the orders query to refresh the list
-      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
-      
-      // Optionally show a toast notification
-      toast({
-        title: 'Order Closed',
-        description: `Order #${lastMessage.data.id} has been closed.`,
-      });
-    }
-    // Handle bay updated message
-    else if (lastMessage?.type === 'bay_updated') {
-      console.log('Bay updated in ServerView:', lastMessage.data.bay);
-      
-      // Update the bays cache directly
-      queryClient.setQueryData(['/api/bays'], (oldData: any[] | undefined) => {
-        if (!oldData) return oldData;
-        return oldData.map(bay => 
-          bay.id === lastMessage.data.bay.id ? lastMessage.data.bay : bay
-        );
-      });
-      
-      // Also invalidate bays query to ensure a refresh
-      queryClient.invalidateQueries({ queryKey: ['/api/bays'] });
-    }
-  }, [lastMessage, queryClient, orders, toast]);
+  // WebSocket messages are now being handled by the useWebSocket hook directly
+  // All relevant queryClient cache updates are done there
+  // No need for additional effects here
 
   // Count alerts/flagged orders
   const alertCount = orders.filter(order => order.isDelayed).length || 0;
