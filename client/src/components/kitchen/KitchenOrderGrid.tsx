@@ -611,10 +611,11 @@ function OrderCard({
                     return "Cancelled";
                   }
                   
-                  // For active orders, only show "Late" with minutes if behind
-                  // Otherwise just show "On time"
+                  // For active orders: when an item hasn't started cooking, 
+                  // the recalculated completion time factors in exactly how far behind we are
                   if (diffMinutes < 0) {
-                    return `${Math.abs(diffMinutes)}m Late`;
+                    const lateText = Math.abs(diffMinutes) === 1 ? "minute" : "minutes";
+                    return `${Math.abs(diffMinutes)}${lateText.charAt(0)} Late`;
                   } else {
                     return "On time";
                   }

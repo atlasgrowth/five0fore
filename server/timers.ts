@@ -217,7 +217,8 @@ export async function updateOrderEstimatedCompletionTime(orderId: string) {
       console.log(`Progress: ${progressFactor * 100}%, Items cooked: ${completedItems}/${totalItems}`);
       console.log(`Load factor: ${loadFactor}, Cook time: ${adjustedCookTime}s, Expo: ${expoBuffer}s`);
     } 
-    // For orders that haven't started cooking yet, base on original creation time
+    // For orders that haven't started cooking yet, 
+    // WE NEED TO CALCULATE HOW MUCH LONGER IT WILL ACTUALLY TAKE FROM NOW
     else if (progressFactor === 0) {
       // Find the longest cook time among all items
       let longestCookTime = 0;
@@ -228,14 +229,20 @@ export async function updateOrderEstimatedCompletionTime(orderId: string) {
         }
       });
       
-      // Use original creation date plus full expected time
-      estimatedCompletionTime = calculateOrderReadyTime(
-        new Date(order.createdAt), 
-        longestCookTime,
-        loadFactor
-      );
+      // CRITICAL FIX: Calculate the time it will actually take from NOW
+      // Current time + prep buffer + longest cook time + expo buffer
+      const now = new Date();
+      const totalExpectedSeconds = applyLoadFactor(PREP_BUFFER_SECONDS + longestCookTime + EXPO_BUFFER_SECONDS, loadFactor);
       
-      console.log(`Order ${orderId} (not started) - Using original estimate: ${estimatedCompletionTime}`);
+      // This is when it will ACTUALLY be ready if we start now
+      estimatedCompletionTime = new Date(now.getTime() + totalExpectedSeconds * 1000);
+      
+      console.log(`Order ${orderId} (not started) - NOW SHOWING TRUE COMPLETION TIME: ${estimatedCompletionTime}`);
+      
+      // Log how many minutes this order is actually behind
+      const originalExpectedTime = calculateOrderReadyTime(new Date(order.createdAt), longestCookTime, loadFactor);
+      const minutesLate = Math.round((estimatedCompletionTime.getTime() - originalExpectedTime.getTime()) / 60000);
+      console.log(`Order ${orderId} is actually ${minutesLate} minutes behind original estimate`);
     }
     // For orders that are complete (all items ready), don't change the time
     else if (progressFactor === 1.0) {
