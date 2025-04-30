@@ -6,6 +6,61 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { OrderSummary, OrderWithItems, OrderItemStatus, OrderStatus } from "@shared/schema";
 
+// Simple cooking timer component
+function CookingTimer({ firedAt, cookSeconds }: { firedAt: string, cookSeconds: number }) {
+  const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [percentage, setPercentage] = useState<number>(0);
+  
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const startTime = new Date(firedAt).getTime();
+      const currentTime = new Date().getTime();
+      const elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
+      const remaining = Math.max(0, cookSeconds - elapsedSeconds);
+      
+      // Calculate percentage complete
+      const percentComplete = Math.min(100, Math.floor((elapsedSeconds / cookSeconds) * 100));
+      
+      setTimeLeft(remaining);
+      setPercentage(percentComplete);
+    };
+    
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+    
+    return () => clearInterval(timer);
+  }, [firedAt, cookSeconds]);
+  
+  // Format time as MM:SS
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+  
+  // Determine color based on progress
+  const getColor = () => {
+    if (percentage >= 100) return "text-red-600";
+    if (percentage >= 90) return "text-amber-600";
+    if (percentage >= 75) return "text-amber-500";
+    return "text-green-600";
+  };
+  
+  return (
+    <div className="ml-2 flex items-center">
+      <div className="relative w-16 h-4 bg-gray-200 rounded-full overflow-hidden">
+        <div 
+          className={`absolute left-0 top-0 h-full ${percentage >= 90 ? 'bg-red-500' : percentage >= 75 ? 'bg-amber-500' : 'bg-green-500'}`}
+          style={{ width: `${percentage}%` }}
+        ></div>
+      </div>
+      <span className={`ml-1 text-xs font-medium ${getColor()}`}>
+        {formatTime(timeLeft)}
+      </span>
+    </div>
+  );
+}
+
 interface KitchenOrderGridProps {
   orders: OrderSummary[];
 }
@@ -297,7 +352,8 @@ function OrderCard({
                     "flex justify-between p-2 mb-2 border-b",
                     item.status === OrderItemStatus.COOKING && "border-l-2 border-l-yellow-500",
                     item.status === OrderItemStatus.PLATING && "border-l-2 border-l-purple-500",
-                    item.status === OrderItemStatus.READY && "border-l-2 border-l-green-500"
+                    item.status === OrderItemStatus.READY && "border-l-2 border-l-green-500",
+                    item.status === OrderItemStatus.DELIVERED && "border-l-2 border-l-blue-500"
                   )}
                 >
                   <div className="flex items-center">
@@ -317,10 +373,34 @@ function OrderCard({
                       <div className="flex items-center">
                         <span className="text-sm font-medium">{item.quantity}x {item.menuItem?.name}</span>
                         
-                        {/* Timer for cooking items */}
+                        {/* Status labels with appropriate indicators */}
                         {item.status === OrderItemStatus.COOKING && item.firedAt && (
-                          <span className="ml-2 text-xs font-medium bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">
-                            Cooking
+                          <div className="ml-2 flex items-center">
+                            <span className="text-xs font-medium bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">
+                              Cooking
+                            </span>
+                            <CookingTimer 
+                              firedAt={item.firedAt} 
+                              cookSeconds={item.cookSeconds || item.menuItem?.prep_seconds || 300}
+                            />
+                          </div>
+                        )}
+                        
+                        {item.status === OrderItemStatus.PLATING && (
+                          <span className="ml-2 text-xs font-medium bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">
+                            Plating
+                          </span>
+                        )}
+                        
+                        {item.status === OrderItemStatus.READY && (
+                          <span className="ml-2 text-xs font-medium bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                            Ready
+                          </span>
+                        )}
+                        
+                        {item.status === OrderItemStatus.DELIVERED && (
+                          <span className="ml-2 text-xs font-medium bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                            Delivered
                           </span>
                         )}
                       </div>
