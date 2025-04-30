@@ -45,12 +45,62 @@ try {
   }
 } catch (err) {
   log(`Failed to initialize Redis connection: ${err}`);
-  // Fallback to a mock Redis client that won't throw errors
+  // Fallback to a mock Redis client that implements all methods needed for BullMQ
   log('Using mock Redis client');
   redisClient = {
     disconnect: () => Promise.resolve(),
     on: () => redisClient,
-    // Other required methods would go here
+    subscribe: () => Promise.resolve(),
+    psubscribe: () => Promise.resolve(),
+    unsubscribe: () => Promise.resolve(),
+    punsubscribe: () => Promise.resolve(),
+    emit: () => true,
+    set: () => Promise.resolve('OK'),
+    get: () => Promise.resolve(null),
+    hset: () => Promise.resolve(0),
+    hget: () => Promise.resolve(null),
+    hdel: () => Promise.resolve(0),
+    hmset: () => Promise.resolve('OK'),
+    hmget: () => Promise.resolve([]),
+    hgetall: () => Promise.resolve({}),
+    del: () => Promise.resolve(0),
+    lpush: () => Promise.resolve(0),
+    rpush: () => Promise.resolve(0),
+    lpop: () => Promise.resolve(null),
+    rpop: () => Promise.resolve(null),
+    llen: () => Promise.resolve(0),
+    lrange: () => Promise.resolve([]),
+    lrem: () => Promise.resolve(0),
+    ltrim: () => Promise.resolve('OK'),
+    sadd: () => Promise.resolve(0),
+    srem: () => Promise.resolve(0),
+    smembers: () => Promise.resolve([]),
+    sismember: () => Promise.resolve(0),
+    publish: () => Promise.resolve(0),
+    multi: () => ({
+      exec: () => Promise.resolve([])
+    }),
+    exec: () => Promise.resolve([]),
+    scan: () => Promise.resolve(['0', []]),
+    zscore: () => Promise.resolve(null),
+    zadd: () => Promise.resolve(0),
+    zrem: () => Promise.resolve(0),
+    zrange: () => Promise.resolve([]),
+    zrangebyscore: () => Promise.resolve([]),
+    zremrangebyscore: () => Promise.resolve(0),
+    zcard: () => Promise.resolve(0),
+    xadd: () => Promise.resolve(''),
+    xread: () => Promise.resolve([]),
+    xreadgroup: () => Promise.resolve([]),
+    xgroup: () => Promise.resolve('OK'),
+    xdel: () => Promise.resolve(0),
+    xack: () => Promise.resolve(0),
+    xpending: () => Promise.resolve([]),
+    xclaim: () => Promise.resolve([]),
+    exists: () => Promise.resolve(0),
+    evalsha: () => Promise.resolve(null),
+    eval: () => Promise.resolve(null),
+    script: () => Promise.resolve(null),
   } as unknown as Redis;
 }
 
