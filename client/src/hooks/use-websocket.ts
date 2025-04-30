@@ -16,12 +16,16 @@ export function useWebSocket() {
   useEffect(() => {
     let reconnectTimeout: NodeJS.Timeout | null = null;
     const connectWebSocket = () => {
-      // Same origin, just replace http -> ws and append /ws
-      const base =
-        window.location.origin.replace(/^http/, "ws") + "/ws?client=kitchen-app";
+      // Use provided environment variable if available, otherwise fallback to origin-based URL
+      const base = 
+        import.meta.env.VITE_WS_BASE_URL || 
+        window.location.origin.replace(/^http/, "ws") + "/ws";
       
-      console.log("Connecting to WebSocket:", base);
-      const ws = new WebSocket(base);
+      // Append client parameter
+      const wsUrl = `${base}${base.includes('?') ? '&' : '?'}client=kitchen-app`;
+      
+      console.log("Connecting to WebSocket:", wsUrl);
+      const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       // Connection event handlers

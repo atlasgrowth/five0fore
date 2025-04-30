@@ -43,7 +43,8 @@ export function startEtaWorker() {
         return { success: true, jobId: job.id };
       } catch (error) {
         console.error(`Error processing job ${job.id}:`, error);
-        throw error; // Rethrow to let BullMQ handle retries
+        // Don't throw - just return error result to prevent server from crashing
+        return { success: false, error: String(error), jobId: job.id };
       }
     }, { 
       connection: redisClient,
@@ -173,7 +174,7 @@ async function processKitchenMetricsJob(job: Job) {
     console.log('Kitchen metrics updated successfully');
   } catch (error) {
     console.error('Error updating kitchen metrics:', error);
-    throw error;
+    // Don't throw - just log the error and continue
   }
 }
 
@@ -191,6 +192,6 @@ async function processBayStatusJob(job: Job) {
     console.log(`Bay ${bayId} status updated successfully`);
   } catch (error) {
     console.error(`Error updating bay ${bayId} status:`, error);
-    throw error;
+    // Don't throw - just log the error and continue
   }
 }
