@@ -75,53 +75,47 @@ app.use((req, res, next) => {
     // Start the kitchen timer background tasks
     startKitchenTimers();
     
-    // Start the ETA calculation worker only if DISABLE_ETA_WORKER isn't set to true
-    // and Redis is actually available
+    // Start the ETA calculation worker
     if (process.env.DISABLE_ETA_WORKER !== 'true') {
-      try {
-        log("Starting ETA calculation worker...");
-        const etaWorker = startEtaWorker();
+      log("Starting ETA calculation worker...");
+      const etaWorker = startEtaWorker();
+      
+      // Initialize kitchen metrics
+      updateKitchenMetrics().then(() => {
+        log("Initial kitchen metrics calculation complete");
+      }).catch(err => {
+        log(`Error during initial kitchen metrics calculation: ${err}`);
+      });
+      
+      // Schedule regular kitchen metrics updates (every 30 seconds)
+      const metricsInterval = setInterval(async () => {
+        try {
+          await addUpdateKitchenMetricsJob();
+        } catch (err) {
+          log(`Error scheduling kitchen metrics update: ${err}`);
+        }
+      }, 30000);
+      
+      // Handle graceful shutdown
+      const shutdown = async () => {
+        log('Shutting down ETA worker and metrics job...');
+        clearInterval(metricsInterval);
         
-        // Initialize kitchen metrics
-        updateKitchenMetrics().then(() => {
-          log("Initial kitchen metrics calculation complete");
-        }).catch(err => {
-          log(`Error during initial kitchen metrics calculation: ${err}`);
-        });
+        try {
+          // Import closeQueues to shut down Redis connections
+          const { closeQueues } = await import('./queue');
+          await closeQueues();
+          log('Queue connections closed successfully');
+        } catch (err) {
+          log(`Error closing queue connections: ${err}`);
+        }
         
-        // Schedule regular kitchen metrics updates (every 30 seconds)
-        const metricsInterval = setInterval(async () => {
-          try {
-            await addUpdateKitchenMetricsJob();
-          } catch (err) {
-            log(`Error scheduling kitchen metrics update: ${err}`);
-          }
-        }, 30000);
-        
-        // Handle graceful shutdown
-        const shutdown = async () => {
-          log('Shutting down ETA worker and metrics job...');
-          clearInterval(metricsInterval);
-          
-          try {
-            // Import closeQueues to shut down Redis connections
-            const { closeQueues } = await import('./queue');
-            await closeQueues();
-            log('Queue connections closed successfully');
-          } catch (err) {
-            log(`Error closing queue connections: ${err}`);
-          }
-          
-          process.exit(0);
-        };
-        
-        // Register shutdown handlers
-        process.on('SIGINT', shutdown);
-        process.on('SIGTERM', shutdown);
-      } catch (err) {
-        log(`Error starting ETA worker: ${err}`);
-        log("ETA worker disabled due to error. Orders will still work but without automatic ETA calculation.");
-      }
+        process.exit(0);
+      };
+      
+      // Register shutdown handlers
+      process.on('SIGINT', shutdown);
+      process.on('SIGTERM', shutdown);
     } else {
       log("ETA calculation worker disabled by environment variable");
     }
