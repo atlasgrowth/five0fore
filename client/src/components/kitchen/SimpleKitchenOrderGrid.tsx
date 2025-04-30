@@ -428,10 +428,10 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
               No new or cooking orders
             </div>
           ) : (
-            <div className="flex space-x-2 overflow-x-auto pb-2">
+            <div className="flex space-x-6 overflow-x-auto pb-2">
               {/* NEW orders first */}
               {ordersByStatus.new.map((order) => (
-                <div key={order.id} className="min-w-[220px] max-w-[220px] flex-shrink-0">
+                <div key={order.id} className="min-w-[380px] max-w-[380px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -443,7 +443,7 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
 
               {/* Then COOKING orders */}
               {ordersByStatus.cooking.map((order) => (
-                <div key={order.id} className="min-w-[220px] max-w-[220px] flex-shrink-0">
+                <div key={order.id} className="min-w-[380px] max-w-[380px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -470,9 +470,9 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
               No orders being plated
             </div>
           ) : (
-            <div className="flex space-x-2 overflow-x-auto pb-2">
+            <div className="flex space-x-6 overflow-x-auto pb-2">
               {ordersByStatus.plating.map((order) => (
-                <div key={order.id} className="min-w-[220px] max-w-[220px] flex-shrink-0">
+                <div key={order.id} className="min-w-[380px] max-w-[380px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -499,9 +499,9 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
               No orders ready to serve
             </div>
           ) : (
-            <div className="flex space-x-2 overflow-x-auto pb-2">
+            <div className="flex space-x-6 overflow-x-auto pb-2">
               {ordersByStatus.ready.map((order) => (
-                <div key={order.id} className="min-w-[220px] max-w-[220px] flex-shrink-0">
+                <div key={order.id} className="min-w-[380px] max-w-[380px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -528,9 +528,9 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
               No served orders
             </div>
           ) : (
-            <div className="flex space-x-2 overflow-x-auto pb-2">
+            <div className="flex space-x-6 overflow-x-auto pb-2">
               {ordersByStatus.served.map((order) => (
-                <div key={order.id} className="min-w-[220px] max-w-[220px] flex-shrink-0">
+                <div key={order.id} className="min-w-[380px] max-w-[380px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
@@ -557,9 +557,9 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
               No closed orders
             </div>
           ) : (
-            <div className="flex space-x-2 overflow-x-auto pb-2">
+            <div className="flex space-x-6 overflow-x-auto pb-2">
               {ordersByStatus.closed.map((order) => (
-                <div key={order.id} className="min-w-[220px] max-w-[220px] flex-shrink-0">
+                <div key={order.id} className="min-w-[380px] max-w-[380px] flex-shrink-0">
                   <OrderCard
                     order={order}
                     toggleItemCompletion={toggleItemCompletion}
