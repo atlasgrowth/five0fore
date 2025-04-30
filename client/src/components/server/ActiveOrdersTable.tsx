@@ -87,7 +87,7 @@ export default function ActiveOrdersTable({ orders, statusFilter }: ActiveOrders
       // Force refetch orders to update counts
       setTimeout(() => {
         // Give the server time to update
-        queryClient.invalidateQueries(['/api/orders']);
+        queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       }, 300);
     } catch (error) {
       toast({

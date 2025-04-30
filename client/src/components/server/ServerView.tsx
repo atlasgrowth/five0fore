@@ -52,6 +52,25 @@ export default function ServerView() {
           description: `A new order has been placed.`,
         });
       }
+    } 
+    // Handle closed orders update message
+    else if (lastMessage?.type === 'closedOrdersUpdate') {
+      // Update the query cache with the latest orders
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      
+      // No need to show a notification for closed orders updates
+      // as they are shown in the CLOSED tab
+    }
+    // Handle single order closed message
+    else if (lastMessage?.type === 'ORDER_CLOSED') {
+      // Invalidate the orders query to refresh the list
+      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      
+      // Optionally show a toast notification
+      toast({
+        title: 'Order Closed',
+        description: `Order #${lastMessage.data.id} has been closed.`,
+      });
     }
   }, [lastMessage, queryClient, orders, toast]);
 
