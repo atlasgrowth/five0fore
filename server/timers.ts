@@ -105,25 +105,33 @@ async function synchronizeBayStatus() {
 
 /**
  * Periodically recalculate estimated completion times for all active orders
+ * This is a lightweight version that only processes orders that are in COOKING or PLATING status
+ * to reduce database load
  */
 async function recalculateAllOrderTimes() {
   try {
     console.log('Running recalculate times job...');
     
-    // Get all active orders
-    const activeOrders = await storage.getActiveOrders();
+    // Only get orders in COOKING or PLATING status
+    // These are the ones that need time updates most critically
+    const cookingOrders = await db.select()
+      .from(orders)
+      .where(
+        inArray(orders.status, ['COOKING', 'PLATING'])
+      )
+      .limit(10); // Add a limit to prevent processing too many at once
     
-    if (activeOrders.length === 0) {
-      console.log('No active orders to update times for.');
+    if (cookingOrders.length === 0) {
+      console.log('No cooking/plating orders to update times for.');
       return;
     }
     
-    console.log(`Found ${activeOrders.length} active orders to update times for.`);
+    console.log(`Found ${cookingOrders.length} cooking/plating orders to update times for.`);
     
     // Update each order's estimated completion time
     const updatedOrderIds = [];
     
-    for (const order of activeOrders) {
+    for (const order of cookingOrders) {
       try {
         const updatedOrder = await updateOrderEstimatedCompletionTime(order.id);
         if (updatedOrder) {
@@ -152,14 +160,14 @@ export function startKitchenTimers() {
   }
   statusSyncTimerId = setInterval(synchronizeBayStatus, 3000);
   
-  // Order time recalculation - run every 10 seconds
+  // Order time recalculation - run every 60 seconds instead of 10 to reduce server load
   if (timeRecalcTimerId) {
     clearInterval(timeRecalcTimerId);
   }
-  timeRecalcTimerId = setInterval(recalculateAllOrderTimes, 10000);
+  timeRecalcTimerId = setInterval(recalculateAllOrderTimes, 60000);
   
-  // Run an immediate recalculation of all order times on startup
-  recalculateAllOrderTimes();
+  // No need to run immediate recalculation on startup as it's causing performance issues
+  // with the large number of orders
 }
 
 /**
