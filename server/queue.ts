@@ -8,15 +8,50 @@ import { log } from './vite';
 const useRealRedis = process.env.USE_REAL_REDIS === 'true';
 let redisClient: Redis;
 
-if (useRealRedis) {
-  log('Using real Redis connection');
-  redisClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-} else {
-  log('Using in-memory Redis connection');
-  redisClient = new Redis({ 
-    maxRetriesPerRequest: null,
-    enableOfflineQueue: false,
-  });
+try {
+  if (useRealRedis) {
+    log('Using real Redis connection');
+    redisClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+      maxRetriesPerRequest: 3,
+      retryStrategy(times) {
+        const delay = Math.min(times * 100, 3000);
+        log(`Redis connection retry attempt ${times}, delaying ${delay}ms`);
+        return delay;
+      },
+      reconnectOnError(err) {
+        log(`Redis connection error: ${err.message}. Attempting to reconnect...`);
+        return true; // Reconnect for all errors
+      }
+    });
+    
+    // Handle Redis events
+    redisClient.on('connect', () => {
+      log('Redis connection established');
+    });
+    
+    redisClient.on('error', (err) => {
+      log(`Redis error: ${err}`);
+    });
+    
+    redisClient.on('close', () => {
+      log('Redis connection closed');
+    });
+  } else {
+    log('Using in-memory Redis connection');
+    redisClient = new Redis({ 
+      maxRetriesPerRequest: null,
+      enableOfflineQueue: false,
+    });
+  }
+} catch (err) {
+  log(`Failed to initialize Redis connection: ${err}`);
+  // Fallback to a mock Redis client that won't throw errors
+  log('Using mock Redis client');
+  redisClient = {
+    disconnect: () => Promise.resolve(),
+    on: () => redisClient,
+    // Other required methods would go here
+  } as unknown as Redis;
 }
 
 // Create queues for different types of jobs

@@ -83,12 +83,39 @@ app.use((req, res, next) => {
       // Initialize kitchen metrics
       updateKitchenMetrics().then(() => {
         log("Initial kitchen metrics calculation complete");
+      }).catch(err => {
+        log(`Error during initial kitchen metrics calculation: ${err}`);
       });
       
       // Schedule regular kitchen metrics updates (every 30 seconds)
-      setInterval(async () => {
-        await addUpdateKitchenMetricsJob();
+      const metricsInterval = setInterval(async () => {
+        try {
+          await addUpdateKitchenMetricsJob();
+        } catch (err) {
+          log(`Error scheduling kitchen metrics update: ${err}`);
+        }
       }, 30000);
+      
+      // Handle graceful shutdown
+      const shutdown = async () => {
+        log('Shutting down ETA worker and metrics job...');
+        clearInterval(metricsInterval);
+        
+        try {
+          // Import closeQueues to shut down Redis connections
+          const { closeQueues } = await import('./queue');
+          await closeQueues();
+          log('Queue connections closed successfully');
+        } catch (err) {
+          log(`Error closing queue connections: ${err}`);
+        }
+        
+        process.exit(0);
+      };
+      
+      // Register shutdown handlers
+      process.on('SIGINT', shutdown);
+      process.on('SIGTERM', shutdown);
     } else {
       log("ETA calculation worker disabled by environment variable");
     }
