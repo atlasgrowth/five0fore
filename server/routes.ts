@@ -580,15 +580,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Update the order status to SERVED and manually set the closedAt timestamp
-      // This will automatically update the bay status if needed via updateOrderStatusBasedOnItems
-      const [updatedOrder] = await db
-        .update(orders)
-        .set({ 
-          status: OrderStatus.SERVED, 
-          closedAt: new Date() 
-        })
-        .where(eq(orders.id, orderId))
-        .returning();
+      const updatedOrder = await storage.updateOrderStatus(orderId, OrderStatus.SERVED);
+      
+      // Also set the closedAt timestamp separately
+      if (updatedOrder) {
+        await db
+          .update(orders)
+          .set({ closedAt: new Date() })
+          .where(eq(orders.id, orderId));
+      }
       
       if (!updatedOrder) {
         return res.status(404).json({ message: 'Order not found' });
@@ -630,7 +630,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Additionally broadcast closed orders for the CLOSED tab
       // This is key to fixing the issue with closed orders not appearing
-      const closedOrders = await storage.getOrdersByStatus('CLOSED');
+      // Use SERVED status with closedAt timestamp for closed orders
+      const servedOrders = await storage.getOrdersByStatus(OrderStatus.SERVED);
+      // Filter to only include orders with closedAt timestamp
+      const closedOrders = servedOrders.filter(order => order.closedAt !== null);
       broadcastUpdate('closedOrdersUpdate', closedOrders);
       
       if (fullOrder) {
@@ -640,7 +643,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data: {
             order: toOrderDTO(updatedOrder),
             items: fullOrder.items.map(item => toOrderItemDTO(item)),
-            status: OrderStatus.CLOSED,
+            status: OrderStatus.SERVED,
             timeElapsed: Math.round((Date.now() - new Date(fullOrder.createdAt).getTime()) / 60000),
             estimatedCompletionTime: fullOrder.estimatedCompletionTime 
               ? new Date(fullOrder.estimatedCompletionTime).toISOString() 
