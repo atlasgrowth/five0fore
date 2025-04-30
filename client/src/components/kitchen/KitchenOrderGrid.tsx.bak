@@ -703,7 +703,7 @@ function OrderCard({
                           // If no cooking items, show "START NOW"
                           if (cookingItems.length === 0) {
                             return (
-                              <div className="absolute -top-2 right-2 bg-red-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm ">
+                              <div className="absolute -top-2 right-2 bg-red-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm animate-pulse">
                                 START NOW
                               </div>
                             );
@@ -741,7 +741,7 @@ function OrderCard({
                           if (startInSeconds <= 0) {
                             // Should start now
                             return (
-                              <div className="absolute -top-2 right-2 bg-red-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm ">
+                              <div className="absolute -top-2 right-2 bg-red-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm animate-pulse">
                                 START NOW
                               </div>
                             );
@@ -787,7 +787,7 @@ function OrderCard({
                       if (isCriticallyLate && !acknowledgedItems[item.id]) {
                         return (
                           <div className="absolute -top-2 right-2 flex items-center gap-1">
-                            <div className="bg-green-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm ">
+                            <div className="bg-green-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm animate-pulse">
                               READY TO CHECK
                             </div>
                             <button 
@@ -803,7 +803,7 @@ function OrderCard({
                         );
                       } else {
                         return (
-                          <div className="absolute -top-2 right-2 bg-green-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm ">
+                          <div className="absolute -top-2 right-2 bg-green-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm animate-pulse">
                             READY TO CHECK
                           </div>
                         );
