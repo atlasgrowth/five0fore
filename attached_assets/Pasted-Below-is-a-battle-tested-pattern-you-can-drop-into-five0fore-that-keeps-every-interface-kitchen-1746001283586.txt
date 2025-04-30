@@ -1,0 +1,161 @@
+Below is a battle-tested pattern you can drop into **five0fore** that keeps every interface (kitchen, server tablet, customer screen) in-sync while avoiding the DB-hammering that made you comment-out the background jobs in `timers.ts` earlier. I’ll start by calling out how the repo works today, then walk through an end-to-end upgrade plan.
+
+---
+
+## 1  |  What the current code is doing
+
+| Where | What it does | Observations |
+|-------|--------------|--------------|
+| **`server/timers.ts`** | Defines `synchronizeBayStatus()` and `recalculateAllOrderTimes()`, then **disables both** with early `return`s and comment-outs because they were “causing too many database queries”  ([five0fore/server/timers.ts at main · atlasgrowth/five0fore · GitHub](https://github.com/atlasgrowth/five0fore/blob/main/server/timers.ts)) | All ETAs / bay colours now go stale unless someone manually refreshes. |
+| **`updateOrderEstimatedCompletionTime()`** in the same file | Recalculates ETA for **one** order, factoring in:<br>• longest remaining cook time<br>• number of active orders (load factor)<br>• progress % through the order  ([five0fore/server/timers.ts at main · atlasgrowth/five0fore · GitHub](https://github.com/atlasgrowth/five0fore/blob/main/server/timers.ts)) | Good logic, but each call still hits the DB 3–4 times. |
+| **`server/constants.ts`** | Houses the tuning knobs (prep buffer, expo buffer, damping, etc.) plus helpers like `applyLoadFactor()` and `calculatePriorityScore()`  ([five0fore/server/constants.ts at main · atlasgrowth/five0fore · GitHub](https://github.com/atlasgrowth/five0fore/blob/main/server/constants.ts)) | Centralised, so we can keep these. |
+| **Kitchen endpoints in `server/routes.ts`** | Every `/fire`, `/plating`, `/ready` route **skips ETA recalcs** to avoid lag  ([five0fore/server/routes.ts at main · atlasgrowth/five0fore · GitHub](https://github.com/atlasgrowth/five0fore/blob/main/server/routes.ts)) | Results in ETA drift during the shift. |
+
+The net result: great formulas, but nothing is calling them in production.
+
+---
+
+## 2  |  Design goals for the new ETA engine
+
+1. **Real-time but cheap** – no polling every 3 s for every order.
+2. **Event-driven** – only recalc the orders that actually changed.
+3. **Predictive** – adapt to current station load and historical cook times.
+4. **Extensible** – work for bar drinks, rush tickets, “on-hold” orders, multi-course fires.
+
+---
+
+## 3  |  Architecture overview
+
+```text
+┌──────────────┐      ① status change        ┌─────────────────┐
+│  Kitchen UI  │ ─────────► │   API Route    │
+└──────────────┘             │  (fire/ready) │
+                             └────────┬──────┘
+                                      │ ② enqueue
+                            ┌─────────▼────────┐
+                            │  ETA Job Queue   │  (BullMQ / Bee-Queue)
+                            └─────────┬────────┘
+                                      │ ③ pull N per tick
+                            ┌─────────▼────────┐
+                            │  Worker (Node)   │
+                            │  – fetch order   │
+                            │  – compute ETA   │
+                            │  – write row     │
+                            │  – WS broadcast  │
+                            └─────────┬────────┘
+                                      │ ④ push
+┌──────────────┐ <────────────────────┘
+│  All clients │  (kitchen, server, customer)
+└──────────────┘
+```
+
+*Why a queue?*  A Redis-backed queue lets you **throttle** recalcs (e.g., 50 jobs/sec) and coalesce multiple rapid-fire events for the same ticket into one update.
+
+---
+
+## 4  |  Step-by-step implementation
+
+### 4.1  Add a lightweight queue
+
+```bash
+npm i bullmq ioredis
+```
+
+`server/queue.ts`
+```ts
+import { Queue, Worker } from 'bullmq';
+export const etaQueue = new Queue('eta', { connection: { host: 'redis' } });
+```
+
+### 4.2  Publish jobs from every order-mutating route
+
+Inside each kitchen route **after** the DB transaction succeeds:
+
+```ts
+await etaQueue.add('recalc', { orderId: order.id }, { jobId: order.id, removeOnComplete: true });
+```
+
+*Using `jobId = order.id` dedupes multiple adds in the same second.*
+
+### 4.3  Dedicated ETA worker
+
+`server/etaWorker.ts`
+```ts
+new Worker('eta', async job => {
+  const { orderId } = job.data;
+  const order = await storage.getOrderWithItems(orderId);
+  if (!order) return;
+
+  const kitchenMetrics = await getKitchenMetrics();          // uses cached value, see 4.4
+  const newETA = computeETA(order, kitchenMetrics);          // pure function
+  await storage.updateOrderETA(orderId, newETA);
+
+  broadcastUpdate('order_eta', { orderId, eta: newETA });    // WS push
+}, { connection: { host: 'redis' }, concurrency: 5 });
+```
+
+### 4.4  Cheap kitchen-load snapshot
+
+```ts
+let cachedMetrics: { activeOrders: number; avgCookSec: number } = { activeOrders: 0, avgCookSec: 300 };
+setInterval(async () => {
+  cachedMetrics.activeOrders = await storage.countActiveOrders();   // single query/3 s
+  cachedMetrics.avgCookSec   = await storage.getRollingAvgCookSec(); // optional
+}, 3000);
+
+function getKitchenMetrics() { return cachedMetrics; }
+```
+
+### 4.5  Extract the ETA algorithm into a pure util
+
+Move the body of `updateOrderEstimatedCompletionTime()` into  
+`shared/eta.ts → export function computeETA(order, metrics)…` so the same math can run on the worker **and** unit tests.
+
+### 4.6  Database tweaks for accuracy
+
+```sql
+ALTER TABLE orders
+  ADD COLUMN actual_total_seconds INT,
+  ADD COLUMN last_eta_seconds INT;
+```
+
+* After a ticket is marked **SERVED**, calculate `actual_total_seconds` and add it to an exponential-moving-average per menu-item (or per station).  
+* Feed that EMA back into future `computeETA` calls for dynamic cook times.
+
+---
+
+## 5  |  Algorithm upgrades (edge-case coverage)
+
+| Scenario | Adjustment |
+|----------|------------|
+| **Rush / VIP** | Add `order.priorityBoost` and subtract e.g. `1 × loadFactor` minutes from ETA. |
+| **On-hold / Staged fire** | Skip ETA updates while status = `ON_HOLD`; resume when `RELEASED`. |
+| **Drinks vs Food** | If all remaining items are `station = "BAR"`, ignore `PREP_BUFFER_SECONDS`. |
+| **Multi-course** | When an item is marked **READY** but others are still cooking, recompute ETA off the longest remaining item. |
+| **Expo bottleneck** | Record actual plating seconds; if > `DEFAULT_PLATING_SECONDS` 3 shifts in a row, raise the constant automatically via `kitchen_settings`. |
+
+---
+
+## 6  |  Performance expectations
+
+| Variant | QPS to DB | P95 ETA latency |
+|---------|-----------|-----------------|
+| Old (global timer every 3 s) | `O(activeOrders)` queries every tick | stale 3–10 s |
+| **New (event + queue)** | *Exactly* the queries touched by the item update + **one extra read/write** for ETA | < 250 ms end-to-end |
+
+With 100 active tickets and 30 item state changes / min, the queue handles ~0.5 jobs/s—trivial.
+
+---
+
+## 7  |  Roll-out checklist
+
+1. **Unit-test** `computeETA()` with fixtures for light, normal, heavy load.
+2. Smoke-test on staging during a simulated dinner rush (`scripts/seedHeavyLoad.ts`).
+3. Gradual rollout: enable queue worker in production but keep UI showing “legacy” ETA; compare behind a feature flag.
+4. Remove the commented-out chunks from `timers.ts`, leaving only the bay-status 3 s sweep (or move that to the same queue if you want zero polling).
+
+---
+
+### TL;DR
+
+*Keep the solid math you already wrote,* but move ETA recalculation to a Redis-backed job queue triggered by **events, not polling**. Cache kitchen metrics, make the ETA function pure and shareable, and feed real completion data back into a rolling average so the system gets smarter every shift. That gives you second-level accuracy with a fraction of today’s database load, and it works on every path—kitchen, server, and customer—without extra code in each route.

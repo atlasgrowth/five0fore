@@ -3,6 +3,9 @@ import cors from 'cors';
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startKitchenTimers } from "./timers";
+import { startEtaWorker } from "./etaWorker";
+import { addUpdateKitchenMetricsJob } from "./queue";
+import { updateKitchenMetrics } from "./metrics";
 
 const app = express();
 app.use(cors({ origin: '*', credentials: true }));
@@ -71,5 +74,23 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
     // Start the kitchen timer background tasks
     startKitchenTimers();
+    
+    // Start the ETA calculation worker
+    if (process.env.DISABLE_ETA_WORKER !== 'true') {
+      log("Starting ETA calculation worker...");
+      const etaWorker = startEtaWorker();
+      
+      // Initialize kitchen metrics
+      updateKitchenMetrics().then(() => {
+        log("Initial kitchen metrics calculation complete");
+      });
+      
+      // Schedule regular kitchen metrics updates (every 30 seconds)
+      setInterval(async () => {
+        await addUpdateKitchenMetricsJob();
+      }, 30000);
+    } else {
+      log("ETA calculation worker disabled by environment variable");
+    }
   });
 })();
