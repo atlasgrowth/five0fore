@@ -1,0 +1,106 @@
+Copy-paste THIS straight into Replit AI
+
+(Everything below the line is code-agent instructions; no extra chat needed.)
+
+⸻
+
+
+
+You are continuing work on the **atlasgrowth/504golf** repo.  
+Target: zero TypeScript errors, Postgres running via Docker, one-command dev workflow.
+
+──────────────────────── 1. DOCKER + ENV ────────────────────────
+• Create docker-compose.yml in repo root:
+  version: "3.9"
+  services:
+    db:
+      image: postgres:15
+      environment:
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+        POSTGRES_DB: swingeats
+      ports:
+        - "5432:5432"
+
+• Add .env.example:
+  DATABASE_URL=postgres://postgres:postgres@localhost:5432/swingeats
+
+──────────────────────── 2. PACKAGE SCRIPTS ─────────────────────
+In root package.json add/replace:
+
+{
+  "scripts": {
+    "dev": "concurrently -k \"tsx server/index.ts\" \"vite --port 5173\"",
+    "db:push": "drizzle-kit push",
+    "db:seed": "tsx scripts/seedBays.ts && tsx scripts/seedMenu.ts",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0"
+  }
+}
+
+Install concurrently if missing.
+
+──────────────────────── 3. STORAGE CLEANUP ─────────────────────
+• Delete / disable MemStorage.  
+• Ensure `server/storage.ts` **only** re-exports `DatabaseStorage` (Drizzle).  
+  All API routes must call `storage.*` methods.
+
+──────────────────────── 4. TYPE/PATH CONSISTENCY ───────────────
+Global naming rules:
+
+| DB field       | API JSON        | Client prop   |
+| -------------- | --------------- | ------------- |
+| prep_seconds   | prepSeconds     | prepSeconds   |
+| price_cents    | priceCents      | priceCents    |
+| qty            | quantity        | quantity      |
+
+Tasks:
+1. Update Drizzle schema comments if needed.  
+2. Create mapper in `server/dto.ts`:
+   ```ts
+   export const toMenuDTO = (row) => ({
+     id: row.id,
+     name: row.name,
+     category: row.category,
+     priceCents: row.price_cents,
+     prepSeconds: row.prep_seconds,
+     station: row.station
+   });
+
+Do similar mappers for orders and order_items; use them in routes.
+3. Run npm run check; fix every error or implicit any.
+
+──────────────────────── 5. UTIL SCRIPTS ────────────────────────
+Ensure these exist & are referenced in README:
+
+• scripts/seedBays.ts  (insert 1-100 into bays)
+• scripts/seedMenu.ts  (reads menu.json → menu_items)
+• scripts/generateQRCodes.ts → ./qr/bay-###.png (use qrcode)
+
+──────────────────────── 6. README QUICK-START ──────────────────
+Append a Getting Started section:
+
+docker compose up -d
+cp .env.example .env
+npm i
+npm run db:push && npm run db:seed
+npm run dev
+
+──────────────────────── 7. VALIDATION ──────────────────────────
+After changes run:
+	1.	npm run check  → 0 errors
+	2.	docker compose up -d + steps above → visit
+	•	http://localhost:5173/bay/1  (place order)
+	•	http://localhost:5173/kitchen/Fry (see ticket)
+
+Commit chronologically:
+	1.	docker/env, 2) scripts, 3) storage swap, 4) type fixes, 5) README.
+
+Done.
+
+---
+
+**Only question for you if needed:**  
+Should we dockerize Node + Vite for production later, or leave just Postgres in Docker for now?

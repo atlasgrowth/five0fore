@@ -1,0 +1,125 @@
+Below is a **working menu draft** for Creole Tavern plus a **tech-task roadmap** that turns your narrative KDS flow into code.  Everything is keyed to the site copy I scraped.  Update quantities, spellings, or 86’d dishes as needed, then drop the JSON into your menu-seed script.
+
+---
+
+## 1 Creole Tavern menu (price, station, suggested `cookSeconds`)
+
+| Item | Price | Station | Rationale → cookSeconds |
+|------|-------|---------|-------------------------|
+| Boudin Balls | 12.50 | **FRY** | deep-fried sausage rice balls → **360 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| 504 Wings | 14 | **FRY** | bone-in, toss & sauce → **540 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Cajun Crawfish Pies | 13 | **FRY/BOIL** | mini pies, fryer finish → **300 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Smoked Tuna Dip + Crackers | 15 | **COLD** | plate-up only → **90 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Pineapple Fried Shrimp | 14 | **FRY** | breaded shrimp → **240 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Clubhouse Nachos | 15.50 | **GRILL/FY** | chip fry + queso ladle → **240 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Chips & Salsa | 6 | **COLD** | scoop chips, ramekin salsa → **60 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Chips & Queso | 9.50 | **GRILL** | heat queso → **180 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| **BURGERS** (*GRILL, 8 oz smash*) | | | |
+| The Hangover | 18 | GRILL | smash patty + toppings → **480 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Classic Ride | 17 | GRILL | as above, fewer toppings → **450 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Electric Blue | 18.50 | GRILL | add bacon jam → **510 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Impossible Burger | 17 | GRILL | 1 × Impossible patty → **420 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| **PIZZA/FLATBREAD (12 in)** | | PIZZA | |
+| 504 Pizza (cheese/pepperoni/sausage) | 17 | PIZZA | deck oven → **720 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Cheesy Garlic Bread | 12.50 | PIZZA | half-tray bake → **480 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Crazy Cajun Flatbread | 22.5 | PIZZA | loaded toppings → **780 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| BBQ Chicken Pizza | 21 | PIZZA | similar bake → **750 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| **Handhelds / Mains** | | |
+| Street Party Tacos | 16 | GRILL | heat pork + plate tortillas → **300 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Crispy Chicken Tenders | 16 | FRY | 3-tender basket → **360 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Steak Frites | 38 | GRILL | 10 oz NY strip, rest → **720 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Filet Upgrade | 46 | GRILL | 8 oz filet → **780 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Shrimp Monique | 24 | BOIL | sauté + pasta toss → **540 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Gulf Catch Creole | 26.5 | GRILL | sear fish + étouffée ladle → **600 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Seafood Platter | 23 | FRY | catfish, shrimp, pies → **600 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Double Platter (feeds army) | 46 | FRY | 2× volume → **900 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| **Salads / Gumbo** | | COLD / BOIL | |
+| Sand Wedge | 13 | COLD | assemble wedge → **120 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Caesar Salad | 12 | COLD | toss → **120 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Strawberries-Goat Cheese | 14 | COLD | toss → **150 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Chicken-Andouille Gumbo (cup) | 8 | BOIL | ladle & rice → **90 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Gumbo (bowl) | 12 | BOIL | larger portion → **90 s** |
+| **Sides** | | |
+| Garlic Grilled Veg  | 7 | GRILL | 3-min flat top → **180 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Kettle Fries | 6 | FRY | basket → **240 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| House Green Salad | 8 | COLD | assemble → **90 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Chips & Salsa (side) | 6 | COLD | 60 s |
+| Queso (side) | 8 | GRILL | 180 s |
+| **Kids** | | |
+| Big Kid Burger | 12 | GRILL | 1 × 3 oz patty → **300 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Kids Chicken Tenders | 12 | FRY | 2 tenders → **300 s** |
+| **Desserts** | | COLD | |
+| On the Green Pie | 8 | COLD | slice plate → **60 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+| Very Berry Cheesecake | 9 | COLD | 60 s |
+| Pecan Bread Pudding | 12 | GRILL | re-warm + sauce → **240 s**  ([Creole Tavern at Five O Fore Golf + Entertainment](https://fiveofore.com/creole-tavern/)) |
+
+> **Cook-time logic**: I defaulted to fryer 4 min, pizzas 12–13 min, grilled proteins 6–13 min.  Adjust once you measure live throughput.
+
+---
+
+## 2 Schema tweaks to support “Fire → Ready → Delivered”
+
+Add to **`order_items`**:
+
+| column | type | notes |
+|--------|------|-------|
+| `status` | ENUM(NEW, COOKING, READY, DELIVERED) | item-level not just order-level |
+| `cookSeconds` | int | pulled from `menu_items` on insert |
+| `firedAt` | TIMESTAMP NULL | set when cook hits **Fire** |
+| `readyAt` | TIMESTAMP NULL | auto-set = `firedAt` + `cookSeconds` |
+| `deliveredAt` | TIMESTAMP NULL |
+
+*Order* status is then computed = **MIN(item.status)**; order is READY when every line is READY, etc.
+
+---
+
+## 3 Endpoints & WebSocket verbs
+
+| Action | HTTP | WS event | Notes |
+|--------|------|----------|-------|
+| Place order | `POST /orders` | `ORDER_NEW` | server breaks items into station queues |
+| Fire item | `POST /order-items/:id/fire` | `ITEM_COOKING` | sets `firedAt`, broadcasts countdown payload |
+| Mark ready | `POST /order-items/:id/ready` | `ITEM_READY` | cooks tap when plating; server also auto-fires once timer hits 0 if desired |
+| Deliver | `POST /order-items/:id/deliver` | `ITEM_DELIVERED` | runner touches off KDS or tablet |
+
+Client KDS subscribes by **station** so FRY only receives items whose `station=="FRY"`.
+
+---
+
+## 4 Front-end KDS wiring
+
+* **Columns**: NEW ‧ COOKING (with animated countdown) ‧ READY  
+* **Card timer**: progress = `(now – firedAt) / cookSeconds`  
+* **Colour**:  
+  * NEW = yellow  
+  * COOKING = blue → turns red if now > readyAt  
+  * READY = green pulse  
+* **Fire button** shown only if `status==="NEW"`.
+
+---
+
+## 5 Next coding tasks
+
+1. **Seed script**  
+   Convert the table above to `creole-tavern-menu.csv` (headers: name, price, station, cookSeconds) and import via your existing Drizzle seeder.
+
+2. **DB migration**  
+   Add the four columns to `order_items` and backfill existing rows (`status="READY"`).
+
+3. **WebSocket events & timers**  
+   *Server*: cron loop every 5 s finds COOKING rows where `now>=readyAt` → flip to READY, broadcast.  
+   *Client*: React context provides `useCountdown(item)` hook for live seconds remaining.
+
+4. **Station filter in KDS UI**  
+   Query param (`?station=FRY`) or user dropdown hitting `localStorage`.
+
+5. **Server Tablet MVP**  
+   List READY items scoped to bay, “Mark Delivered”.
+
+6. **Auth wall**  
+   Shallow cookie login; role=`kitchen`, `server`, `guest`.
+
+7. **Analytics stub**  
+   nightly job summarises `AVG(cookSeconds)` and `lateCount`.
+
+Implement those and the workflow you described will run exactly as written.  Let me know when you want the import CSV or sample code snippets for the timer hook.

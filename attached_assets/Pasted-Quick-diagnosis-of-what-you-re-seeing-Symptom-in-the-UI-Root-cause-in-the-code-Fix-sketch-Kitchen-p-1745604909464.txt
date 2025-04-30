@@ -1,0 +1,90 @@
+Quick diagnosis of what you’re seeing
+
+Symptom in the UI	Root-cause in the code	Fix sketch
+Kitchen page shows only the order number (no bay/time/items)	KitchenOrderGrid makes a second React-Query call (/api/order/:id) to pull the full payload. That call 404s because you never created the /api/order/{id} route until very recently and the client is still hitting the old singular path (/api/orders/:id).	Change the query key+URL in KitchenOrderGrid.tsx to ["/api/order", order.id] and call GET /api/order/${order.id} (singular order).
+No “Fire / Ready / Deliver” controls appear	Buttons are rendered only when the inner orderDetails request resolves. Because that request fails, JSX short-circuits and you see a bare card.	Same fix as above; once the order payload loads, the check-boxes & “Ready” button render.
+Time placed / countdown missing	order.timeElapsed is provided by GET /api/orders but timer UX is “static elapsed minutes”, not a live countdown from firedAt → readyAt.	Need TimerPill to observe WebSocket ITEM_COOKING events and update every second until readyAt.
+Immediate to-do list (one commit)
+Below is a single patch block – paste it into Replit’s shell (apply_patch <<'PATCH' … PATCH) then run pnpm dev.
+It (1) fixes the broken fetch, (2) shows placed-at time, (3) wires a very simple Fire → Ready flow so you can click through the life-cycle.
+
+bash
+Copy
+Edit
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: client/src/components/kitchen/KitchenOrderGrid.tsx
+@@
+-const getOrderDetails = (orderId: string) => {
+-  return useQuery<OrderWithItems>({
+-    queryKey: [`/api/order/${orderId}`],
+-  });
+-};
++const getOrderDetails = (orderId: string) =>
++  useQuery<OrderWithItems>({
++    // API route is /api/order/:id  (singular)
++    queryKey: ["/api/order", orderId],
++    queryFn: () => apiRequest("GET", `/api/order/${orderId}`),
++    staleTime: 10_000,
++  });
+*** End Patch
+PATCH
+Add placed-at + age label
+bash
+Copy
+Edit
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: client/src/components/kitchen/KitchenOrderGrid.tsx
+@@   return (
+-        <div className="flex justify-between items-start">
++        <div className="flex justify-between items-start">
+           <div>
+             <span className="text-sm font-medium text-neutral-600">Order #{order.orderNumber}</span>
+             <h3 className="font-poppins font-bold text-lg">Bay {order.bayNumber} (Floor {order.floor})</h3>
++            <p className="text-xs text-neutral-500">
++              Placed&nbsp;
++              {new Date(order.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
++              &nbsp;—&nbsp;{order.timeElapsed} min ago
++            </p>
+           </div>
+*** End Patch
+PATCH
+Quick Fire ↔ Ready toggle
+Until the dedicated “Fire” button lands, let cooks tick a checkbox next to an item to mark Fire (if NEW) or Ready (if COOKING).
+
+bash
+Copy
+Edit
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: client/src/components/kitchen/KitchenOrderGrid.tsx
+@@ const toggleItemCompletion = async (orderItemId: string, completed: boolean) => {
+-    await apiRequest('PUT', `/api/orderitem/${orderItemId}/status`, { completed });
++    // If the item hasn't been fired yet, call /fire first
++    const endpoint = completed ? "/ready" : "/fire";
++    await apiRequest("POST", `/api/order-items/${orderItemId}${endpoint}`);
+*** End Patch
+PATCH
+Fix the wrong endpoint on the Ready button
+bash
+Copy
+Edit
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: client/src/components/kitchen/KitchenOrderGrid.tsx
+@@ const markOrderAsReady = async (orderId: string) => {
+-    await apiRequest('PUT', `/api/order/${orderId}/status`, { status: 'ready' });
++    await apiRequest("POST", `/api/order/${orderId}/ready`);
+*** End Patch
+PATCH
+After you commit & push
+Reload /kitchen – each card should now show bay, floor, placed-at time, and item list.
+
+Click a checkbox to trigger Fire; checkbox again flips to Ready (watch card colour change).
+
+“Ready” button moves the whole order to green READY column.
+
+Open /server – you should now receive item status updates and see same metadata.
+
+If anything 404s in DevTools after this patch, ping me with the exact path and console log and I’ll drop the next diff.

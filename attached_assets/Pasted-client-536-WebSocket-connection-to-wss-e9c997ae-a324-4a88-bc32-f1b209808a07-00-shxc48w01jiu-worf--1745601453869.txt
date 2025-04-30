@@ -1,0 +1,33 @@
+client:536 WebSocket connection to 'wss://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.dev/?token=aplLSZLHEqNi' failed: 
+setupWebSocket @ client:536Understand this error
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=aplLSZLHEqNi' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)Understand this error
+chunk-WERSD76P.js?v=5174fba2:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+ServerView.tsx:46 Opening new order dialog
+react_jsx-dev-runtime.js?v=5174fba2:64 Warning: Each child in a list should have a unique "key" prop.
+
+Check the render method of `ServerOrderDialog`. See https://reactjs.org/link/warning-keys for more information.
+    at button
+    at ServerOrderDialog (https://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.dev/src/components/server/ServerOrderDialog.tsx:26:45)
+    at div
+    at ServerView (https://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.dev/src/components/server/ServerView.tsx:29:21)
+    at Server
+    at Route (https://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=5174fba2:323:16)
+    at Switch (https://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=5174fba2:379:17)
+    at Router
+    at OrderProvider (https://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.dev/src/contexts/OrderContext.tsx:21:33)
+    at Provider (https://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-MAE4WKEQ.js?v=5174fba2:38:15)
+    at TooltipProvider (https://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=5174fba2:59:5)
+    at QueryClientProvider (https://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=5174fba2:2805:3)
+    at App
+printWarning @ react_jsx-dev-runtime.js?v=5174fba2:64Understand this error
+api/orders:1 
+            
+            
+           Failed to load resource: the server responded with a status of 400 (Bad Request)Understand this error
+ServerOrderDialog.tsx:191 Failed to place order: Error: 400: {"message":"Invalid order data","errors":[{"code":"invalid_type","expected":"number","received":"undefined","path":["cart","items",0,"priceCents"],"message":"Required"},{"code":"invalid_type","expected":"number","received":"undefined","path":["cart","items",1,"priceCents"],"message":"Required"}]}
+    at throwIfResNotOk (queryClient.ts:6:11)
+    at async apiRequest (queryClient.ts:22:3)
+    at async placeOrder (ServerOrderDialog.tsx:172:24)

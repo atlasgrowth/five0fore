@@ -1,0 +1,43 @@
+{
+  "name": "swingeats",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:server": "NODE_ENV=development tsx server/index.ts",
+    "dev:shared": "pnpm --filter=@swingeats/shared build --watch",
+    "dev:guest": "pnpm --filter=@swingeats/guest-web dev",
+    "dev:tablet": "pnpm --filter=@swingeats/server-tablet dev",
+    "dev:kds": "pnpm --filter=@swingeats/kitchen-kds dev",
+    "dev": "concurrently \"pnpm dev:server\" \"pnpm dev:shared\" \"pnpm dev:guest\"",
+    "build": "pnpm --filter=@swingeats/shared build && pnpm --filter=@swingeats/guest-web build && pnpm --filter=@swingeats/server-tablet build && pnpm --filter=@swingeats/kitchen-kds build",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.9.0",
+    "concurrently": "^8.2.2",
+    "connect-pg-simple": "^9.0.1",
+    "drizzle-kit": "^0.21.1",
+    "drizzle-orm": "^0.31.0",
+    "drizzle-zod": "^0.7.0",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "memorystore": "^1.6.7",
+    "pg": "^8.11.3",
+    "tsx": "^4.6.2",
+    "ws": "^8.16.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/express-session": "^1.17.10",
+    "@types/node": "^20.10.5",
+    "@types/pg": "^8.10.9",
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.3.3"
+  }
+}

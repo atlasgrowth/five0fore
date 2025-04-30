@@ -1,0 +1,116 @@
+SwingEats is a full-stack digital ordering and kitchen management platform tailored for venues like 504 Golf’s Creole Tavern. It replaces paper tickets and clunky printers with real-time, multi-interface workflows—giving guests, servers, and cooks exactly the tools they need to keep food moving smoothly.
+
+1. Product Overview
+SwingEats connects three user-facing apps to a single Postgres database via WebSockets:
+
+Guest Web App (QR-driven)
+
+Scan a QR code at your bay/table.
+
+Browse the full menu with photos, descriptions, prices.
+
+Add items to a cart, specify quantities, and submit directly to the kitchen.
+
+Receive real-time status updates (“Cooking…”, “Ready!”) with visual alerts.
+
+Server Tablet App (Staff-only)
+
+Dashboard of open bays with order summaries.
+
+Tap into any bay to view current orders, add edits or new items.
+
+Mark orders as “Served” once delivered.
+
+Push instant notifications to guests or kitchen if adjustments are needed.
+
+Kitchen Display System (KDS)
+
+Station-specific screens (Grill, Fry, Pizza, etc.) auto-refresh every few seconds.
+
+Tickets sorted by “ready_by” time—longer-cook items first.
+
+Color-coded statuses:
+
+NEW (yellow)
+
+COOKING (blue)
+
+READY (green)
+
+LATE (red, flashing)
+
+One-click “Mark Ready” updates order status across all interfaces.
+
+All three apps share the same event stream via a lightweight WebSocket server, ensuring everyone sees the latest changes instantly.
+
+2. Core Features
+A. Menu & Order Management
+Dynamic Menu Import:
+Upload a CSV/JSON of any menu—names, descriptions, categories, images, prices, and per-item cook times.
+
+Prep-Time Logic:
+Every item carries a prepSeconds value. The system calculates readyBy = placedAt + prepSeconds and flags items as late if they exceed a configurable threshold (default +2 minutes).
+
+Item Routing:
+Each menu item is assigned to one kitchen station (e.g. Fry, FlatTop, PizzaOven). The KDS app filters tickets by station, so cooks only see what’s relevant to them.
+
+B. Real-Time Flow & Notifications
+WebSockets:
+Bi-directional updates push new orders, status changes, and edits instantly to all connected clients.
+
+Visual & Audible Alerts:
+Guests get a flashing banner when their food is ready. Kitchens can play a tone or browser notification on “NEW” or “READY” events.
+
+C. QR Code Table Linking
+Auto-Generated QR PNGs:
+A script creates 100 QR images (bay-001.png to bay-100.png), each encoding a unique URL (/bay/{n}) so orders are tied to the correct location.
+
+Printable Assets:
+High-res PNGs ready for on-site printing or digital display.
+
+D. Admin & Data Layer
+Drizzle ORM on PostgreSQL:
+All data—menu_items, bays, orders, order_items—lives in a robust relational database with migrations support.
+
+Seed Scripts:
+One-click database seeds for bays and menu import, ensuring your staging or production environments match exactly.
+
+Modular Codebase:
+Monorepo with PNPM workspaces:
+
+/server (Express + ws)
+
+/apps/guest-web, /apps/server-tablet, /apps/kitchen-kds (Vite + React + Tailwind)
+
+/scripts (seeders, QR generator)
+
+3. Technical Architecture
+text
+Copy
+Edit
+[Browser: Guest / Server / Kitchen] ←→ WebSocket gateway ←→ Express API ←→ Drizzle/Postgres
+                                         ↓
+                                  Seed & QR scripts
+Express API handles REST for menus & orders, and bridges WebSocket events.
+
+Drizzle provides type-safe schema, migrations, and queries.
+
+Vite + React delivers fast, hot-reload front-ends packaged with Tailwind for a polished UI.
+
+4. Future Enhancements
+Payment Integration:
+Add Stripe or Square for guest-side pre-authorization or on-site payments.
+
+Analytics Dashboard:
+Track average prep times, late-rate percentages, busiest bays, and peak-order intervals.
+
+Printer Bridge:
+Optional low-latency ticket printing for kitchens lacking display screens.
+
+Staff Authentication & Roles:
+Secure server and kitchen apps behind login, with granular permissions.
+
+Multi-venue Support:
+Namespaces or subdomains to spin up SwingEats for different restaurants with shared code.
+
+In summary, SwingEats is a unified, real-time ordering ecosystem that streamlines guest self-ordering, server management, and kitchen workflows—cutting out paper chaos and empowering your team to focus on serving great food on time.

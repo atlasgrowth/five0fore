@@ -1,0 +1,111 @@
+# ========== PRICE + COMPLETED STATUS HOTFIX =================================
+# Goal: Kitchen & Server views show real $$ and the checkbox turns an item READY
+#       (no other refactors, keep surface area tiny).
+
+##############################################################################
+# 1.  When creating an order, copy price + station from menu_items
+##############################################################################
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: server/routes.ts
+@@
+-  // build order_items rows
+-  const items = cart.items.map(i => ({
+-    id: crypto.randomUUID(),
+-    orderId,
+-    menuItemId: i.menuItemId,
+-    quantity: i.quantity,
+-    priceCents: 0,           // <-- currently always zero
+-    station: "GRILL",        // temp default
+-    status: "NEW"
+-  }));
++  // build order_items rows – pull price & station from menu_items table
++  const items = await Promise.all(cart.items.map(async i => {
++    const m = await db.query.menuItems.findFirst({
++      where: eq(menuItems.id, i.menuItemId)
++    });
++    return {
++      id: crypto.randomUUID(),
++      orderId,
++      menuItemId: i.menuItemId,
++      quantity: i.quantity,
++      priceCents: m?.priceCents ?? 0,
++      station: m?.station ?? "GRILL",
++      status: "NEW"
++    };
++  }));
+*** End Patch
+PATCH
+
+##############################################################################
+# 2.  DTO mapper already camelizes priceCents – no change needed
+##############################################################################
+
+##############################################################################
+# 3.  Use priceCents and status in KitchenOrderGrid.tsx
+##############################################################################
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: client/src/components/kitchen/KitchenOrderGrid.tsx
+@@
+-                          <Checkbox 
+-                            checked={item.completed} 
+-                            onCheckedChange={(checked) => toggleItemCompletion(item.id, checked as boolean, item.status || undefined)}
++                          <Checkbox
++                            checked={item.status === "READY"}
++                            onCheckedChange={(checked) =>
++                              toggleItemCompletion(
++                                item.id,
++                                checked as boolean,
++                                item.status
++                              )
++                            }
+                             className="mr-2 h-4 w-4 text-primary"
+                           />
+@@
+-                          <span className="text-xs font-medium text-neutral-800">
+-                            ${item.menuItem?.price_cents ? (item.menuItem.price_cents / 100).toFixed(2) : '0.00'}
++                          <span className="text-xs font-medium text-neutral-800">
++                            ${((item.priceCents ?? 0) / 100).toFixed(2)}
+                           </span>
+*** End Patch
+PATCH
+
+##############################################################################
+# 4.  Checkbox toggle: decide endpoint based on item.status
+##############################################################################
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: client/src/components/kitchen/KitchenOrderGrid.tsx
+@@
+-      // If checked true and status is NEW or undefined, call /fire
+-      // If checked true and status is COOKING, call /ready  
+-      // If unchecked, always call /fire to reset to cooking state
+-      if (completed) {
+-        if (currentStatus === "COOKING") {
++      // If user checks box:
++      //   NEW   -> fire  ✅
++      //   COOKING -> ready ✅
++      // If user un-checks a READY item -> fire again (back to cooking)
++      if (completed) {
++        if (currentStatus === "COOKING") {
+           endpoint = "/ready";
+           actionTitle = "Item Ready";
+         } else {
+           endpoint = "/fire";
+           actionTitle = "Item Fired";
+         }
+       } else {
+         endpoint = "/fire";
+         actionTitle = "Item Fired";
+       }
+*** End Patch
+PATCH
+
+##############################################################################
+# 5.  Type-check, commit, push
+##############################################################################
+pnpm dlx tsc -p tsconfig.json --noEmit
+git add -A
+git commit -m "fix(order): copy priceCents into items, render real price, checkbox toggles by status"
+git push

@@ -1,0 +1,107 @@
+Quick repo-health check
+
+✅ / ⚠️	Area	What changed in the latest push	Verdict
+✅	Drizzle schema & config	shared/schema.ts, drizzle.config.ts added with all tables (menu items, bays, orders, order_items)  ￼	Solid start
+⚠️	Real DB wiring	Commits say “database integration”, but server/storage.ts still exports MemStorage only — every API call is in-memory  ￼	Not actually using Postgres yet
+⚠️	Seed / menu import	No scripts/seedMenu.ts; sample data in MemStorage still shows burgers & beers, not the full Creole Tavern JSON.	Missing
+⚠️	Docker / env	No docker-compose.yml; .env.example missing, so Drizzle can’t pick up DATABASE_URL.	Missing
+⚠️	QR util	QR generator script not created.	Missing
+⚠️	TypeScript errors	Most come from renamed fields: schema uses prepSeconds, client/server code still expects prepTime, quantity vs qty, etc.	Refactor needed
+✅	Three React apps	client/src/pages has bay, server and kitchen pages from the first scaffold (looks OK at a glance).	Good foundation
+⚠️	Build scripts	Monorepo isn’t wired for workspaces; single package.json tries to run both server & client but Vite/Express ports collide.	Needs polish
+
+Bottom line:
+The bot added the database schema but didn’t swap the code over or generate the helper scripts, so nothing compiles cleanly yet. Let’s give it a focused follow-up prompt that:
+	1.	Replaces MemStorage with DatabaseStorage (Drizzle + Postgres).
+	2.	Fixes type mismatches across server & client.
+	3.	Adds seed + QR + Docker in one shot.
+
+⸻
+
+Copy-this-prompt into Replit AI
+
+You need to finish the DB migration for SwingEats.
+
+──────── 1. STORAGE LAYER ────────
+• Create `server/db.ts` that exports a Drizzle client:
+  ```ts
+  import { drizzle } from "drizzle-orm/node-postgres";
+  import pg from "pg";
+  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  export const db = drizzle(pool);
+
+• In server/storage.ts
+– Rename current file to storage.mem.ts.
+– Add storage.db.ts that implements ALL methods of IStorage
+using Drizzle queries for menuItems, bays, orders, orderItems.
+– In server/storage.ts re-export:
+ts import { DatabaseStorage } from "./storage.db"; export const storage = new DatabaseStorage(); 
+– Remove MemStorage sample data; real data will come from seed.
+
+──────── 2. SEED & MIGRATE ────────
+• New script scripts/seedMenu.ts
+– Reads menu.json (create it with the full Creole Tavern items + prepSeconds from previous JSON).
+– Inserts bays 1-100 if missing.
+– Inserts all menu items with correct fields.
+• Add npm scripts:
+
+"db:push": "drizzle-kit push",
+"db:seed": "ts-node scripts/seedMenu.ts"
+
+──────── 3. DOCKER & ENV ────────
+• Add docker-compose.yml
+
+version: '3.9'
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: swingeats
+    ports:
+      - "5432:5432"
+
+• Add .env.example with DATABASE_URL=postgres://postgres:postgres@localhost:5432/swingeats
+
+──────── 4. TYPE REFACTOR ────────
+• Align names across layers:
+– prepSeconds everywhere (remove prepTime).
+– qty in DB, but map to quantity in API responses for client ease.
+• Run tsc --noEmit and resolve all errors.
+
+──────── 5. QR SCRIPT ────────
+• scripts/gen-qr.ts loops 1-100 and writes PNGs to /qr using qrcode package.
+
+──────── 6. MONOREPO SCRIPTS ────────
+• Add concurrently dev script:
+
+"dev": "concurrently -k \"pnpm --filter server dev\" \"pnpm --filter client dev\""
+
+• Ensure client Vite runs on 5173, server on 3000.
+
+Commit granularly:
+	1.	storage swap, 2) seed + migrate, 3) docker/env, 4) refactor fixes, 5) qr util, 6) scripts.
+
+Test sequence in README:
+
+docker compose up -d
+cp .env.example .env
+pnpm i
+pnpm db:push && pnpm db:seed
+pnpm dev
+
+Everything should compile with zero TypeScript errors and live data.
+
+Ask me if any step is unclear before you start.
+
+---
+
+### Why this prompt should work
+
+* **Single responsibility:** each section has an explicit deliverable.  
+* **Concrete code snippets:** reduces ambiguity that confused the agent last time.  
+* **Type-matching rules:** prevents the prepSeconds/qty mismatches that triggered the errors you saw.  
+* **Docker + env:** guarantees Drizzle can connect locally.  
+
+Run that prompt, push again, and I’ll do another pass to make sure the build is clean and the DB actually persists orders.

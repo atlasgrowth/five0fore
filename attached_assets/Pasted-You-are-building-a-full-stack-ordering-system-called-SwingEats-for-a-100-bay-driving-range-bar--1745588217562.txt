@@ -1,0 +1,136 @@
+You are building a full-stack ordering system called **SwingEats** for a 100-bay driving-range bar (Creole Tavern @ 504 Golf).  
+Target stack: Node 20, Express, Vite + React 18 + Tailwind, Drizzle ORM on Postgres 15, WebSocket (ws) for real-time, TypeScript everywhere, PNPM workspaces.
+
+──────── 1. WORKSPACE LAYOUT ────────
+/apps
+  /guest-web      Vite React SPA for customers scanning a QR at each bay
+  /server-tablet  Vite React SPA for waitstaff (iPad landscape)
+/kitchen-kds      Vite React SPA per station (auto-refresh grid)
+/packages
+  /api            Express + ws server, shares types via ts-path aliases
+  /db             Drizzle schema, seed script, migrations
+/scripts          misc utilities (qr generator, seed run)
+/docker           docker-compose.yml (postgres + server)
+/README.md        quick-start
+Ensure `pnpm i && pnpm run dev` spins everything up (concurrently).
+
+──────── 2. ENV & DOCKER ────────
+docker-compose with:
+- postgres:15 (user=postgres, pass=postgres, db=swingeats)
+Expose port 5432.
+Provide .env.example with DATABASE_URL=postgres://postgres:postgres@localhost:5432/swingeats
+
+──────── 3. DATABASE (Drizzle) ────────
+Tables:
+
+• menu_items
+  id PK uuid, name text, category text, price_cents int,
+  station text, prep_seconds int
+
+• bays        id smallint PK (1-100)
+• orders
+  id uuid PK, bay_id smallint FK→bays, status enum('NEW','COOKING','READY','SERVED','LATE'),
+  created_at timestamptz default now()
+
+• order_items
+  id uuid PK, order_id uuid FK→orders, menu_item_id uuid FK→menu_items,
+  qty int, fired_at timestamptz, ready_by timestamptz
+
+Create `drizzle.config.ts`; include a migration + seed script that:
+
+1. Inserts bays 1-100
+2. Inserts the full menu below with **prep_seconds** from the supplied mapping.
+
+──────── 4. MENU & PREP TIMES (seed data) ────────
+Paste this JSON array in `seedMenu.ts`:
+
+[
+  { "name":"Boudin Balls", "category":"Shareables", "price":1250, "station":"Fry", "prep_seconds":420 },
+  { "name":"504 Wings", "category":"Shareables", "price":1400, "station":"Fry", "prep_seconds":540 },
+  { "name":"Cajun Crawfish Pies", "category":"Shareables", "price":1300, "station":"Fry", "prep_seconds":480 },
+  { "name":"Smoked Tuna Dip with Cajun Fried Crackers", "category":"Shareables", "price":1500, "station":"Cold", "prep_seconds":300 },
+  { "name":"Pineapple Fried Shrimp with Sriracha Sesame Salad", "category":"Shareables", "price":1400, "station":"Fry", "prep_seconds":480 },
+  { "name":"Clubhouse Nachos", "category":"Shareables", "price":1550, "station":"Saute", "prep_seconds":540 },
+  { "name":"Just Chips and Salsa", "category":"Shareables", "price":600, "station":"Cold", "prep_seconds":180 },
+  { "name":"Plus Bowl of Queso", "category":"Shareables", "price":800, "station":"Saute", "prep_seconds":240 },
+  { "name":"Just Chips and Queso", "category":"Shareables", "price":950, "station":"Saute", "prep_seconds":240 },
+
+  { "name":"The Hangover", "category":"Smashburgers", "price":1800, "station":"FlatTop", "prep_seconds":660 },
+  { "name":"The Classic Ride", "category":"Smashburgers", "price":1700, "station":"FlatTop", "prep_seconds":600 },
+  { "name":"Electric Blue", "category":"Smashburgers", "price":1850, "station":"FlatTop", "prep_seconds":660 },
+  { "name":"Impossible Burger", "category":"Smashburgers", "price":1700, "station":"FlatTop", "prep_seconds":600 },
+
+  { "name":"504 12” Pizza", "category":"Pizza & Flatbreads", "price":1700, "station":"PizzaOven", "prep_seconds":900 },
+  { "name":"Cheesy Garlic Bread", "category":"Pizza & Flatbreads", "price":1250, "station":"PizzaOven", "prep_seconds":540 },
+  { "name":"Crazy Cajun Flatbread", "category":"Pizza & Flatbreads", "price":2250, "station":"PizzaOven", "prep_seconds":780 },
+  { "name":"Barbecue Chicken Pizza", "category":"Pizza & Flatbreads", "price":2100, "station":"PizzaOven", "prep_seconds":900 },
+  { "name":"Barbecue Chicken Flatbread Pizza", "category":"Pizza & Flatbreads", "price":2100, "station":"PizzaOven", "prep_seconds":780 },
+
+  { "name":"Street Party Tacos ‘Al Pastor’", "category":"Handhelds", "price":1600, "station":"Saute", "prep_seconds":600 },
+  { "name":"Crispy Fried Chicken Tenders", "category":"Handhelds", "price":1600, "station":"Fry", "prep_seconds":540 },
+
+  { "name":"Steak Frites", "category":"Entrées & Mains", "price":3800, "station":"FlatTop", "prep_seconds":1200 },
+  { "name":"Shrimp Monique", "category":"Entrées & Mains", "price":2400, "station":"Saute", "prep_seconds":900 },
+  { "name":"Gulf Catch Creole", "category":"Entrées & Mains", "price":2650, "station":"FlatTop", "prep_seconds":960 },
+  { "name":"Golden Fried Seafood Platter", "category":"Entrées & Mains", "price":2300, "station":"Fry", "prep_seconds":780 },
+  { "name":"Make It a Double and Feed an Army", "category":"Entrées & Mains", "price":4600, "station":"Fry", "prep_seconds":1140 },
+
+  { "name":"Sand Wedge", "category":"Salads & Soups", "price":1300, "station":"Cold", "prep_seconds":300 },
+  { "name":"Classic Caesar Salad", "category":"Salads & Soups", "price":1200, "station":"Cold", "prep_seconds":300 },
+  { "name":"Strawberries & Goat Cheese Salad", "category":"Salads & Soups", "price":1400, "station":"Cold", "prep_seconds":300 },
+  { "name":"Chicken-Andouille Gumbo (Cup)", "category":"Salads & Soups", "price":800, "station":"Boil", "prep_seconds":480 },
+  { "name":"Chicken-Andouille Gumbo (Bowl)", "category":"Salads & Soups", "price":1200, "station":"Boil", "prep_seconds":600 },
+
+  { "name":"Garlic Grilled Vegetables", "category":"Sides", "price":700, "station":"FlatTop", "prep_seconds":360 },
+  { "name":"Crispy Kettle Fries", "category":"Sides", "price":600, "station":"Fry", "prep_seconds":360 },
+  { "name":"House Green Salad", "category":"Sides", "price":800, "station":"Cold", "prep_seconds":240 },
+  { "name":"Chips and Salsa", "category":"Sides", "price":600, "station":"Cold", "prep_seconds":180 },
+  { "name":"Plus Bowl of Queso (Side)", "category":"Sides", "price":800, "station":"Saute", "prep_seconds":240 },
+
+  { "name":"The Big Kid Burger", "category":"Kids", "price":1200, "station":"FlatTop", "prep_seconds":540 },
+  { "name":"Fried Chicken Tenders (Kids)", "category":"Kids", "price":1200, "station":"Fry", "prep_seconds":480 },
+
+  { "name":"On the Green (Key Lime Pie)", "category":"Desserts", "price":800, "station":"Cold", "prep_seconds":240 },
+  { "name":"Very Berry Cheesecake", "category":"Desserts", "price":900, "station":"Cold", "prep_seconds":240 },
+  { "name":"Pecan Chocolate Chip Bread Pudding", "category":"Desserts", "price":1200, "station":"Oven", "prep_seconds":600 }
+]
+
+──────── 5. BUSINESS LOGIC ────────
+• POST /orders
+  payload: bay_id, items:[{menu_item_id, qty}]
+  For each item: compute ready_by = now + prep_seconds.
+  Response: order uuid.
+
+• Scheduler:
+  – Every 30 s scan orders; if now > ready_by + 120 s AND status < 'SERVED' set status='LATE'.
+  – New WebSocket event `orderUpdate` pushes status changes to all connected UIs.
+
+• Kitchen pick-list:
+  – Sort tickets by min(ready_by) ascending (longer cooks appear first).
+
+──────── 6. FRONTEND FEATURES ────────
+Guest (QR): menu list → add to cart → submit → WebSocket listens for “READY” and flashes alert.
+
+Server tablet: bay grid → open bay → see running tab → add items → mark served.
+
+Kitchen KDS:
+  route /station/:name
+  displays cards per order_item for that station
+    color map: NEW=yellow, COOKING=blue, READY=green,
+               LATE=red flashing
+  click card → mark READY.
+
+──────── 7. UTILITIES ────────
+`pnpm drizzle:push`  → run migrations  
+`pnpm seed`          → run seedMenu.ts  
+`pnpm gen:qr`        → outputs ./qr/bay-###.png using the lib “qrcode”.
+
+──────── 8. TEST SEQUENCE ────────
+1. `docker compose up -d`
+2. `pnpm i`
+3. `pnpm drizzle:push && pnpm seed`
+4. `pnpm --filter api run dev & pnpm --filter apps/* run dev`
+5. Open http://localhost:5173/bay/1 and http://localhost:5173/kitchen/Fry in two tabs,
+   place an order, watch real-time flow.
+
+Implement everything above cleanly with ESLint + Prettier configured, ts-path aliases, and granular commits. Push to GitHub when finished.

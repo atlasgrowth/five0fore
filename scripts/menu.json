@@ -1,0 +1,56 @@
+[
+  { "name":"House-Made Guacamole & Chips", "category":"Starters", "price":1400, "station":"Cold", "prepSeconds":240 },
+  { "name":"Baked Brie on Flatbread", "category":"Starters", "price":1600, "station":"PizzaOven", "prepSeconds":540 },
+  { "name":"Spinach & Artichoke Dip", "category":"Starters", "price":1400, "station":"Saute", "prepSeconds":480 },
+  { "name":"The 'Green' - Fried Brussels Sprouts", "category":"Starters", "price":1200, "station":"Fry", "prepSeconds":360 },
+  { "name":"Hot Honey Cornbread Skillet", "category":"Starters", "price":900, "station":"Oven", "prepSeconds":660 },
+  { "name":"Crab & Crawfish Cakes", "category":"Starters", "price":1800, "station":"FlatTop", "prepSeconds":480 },
+  { "name":"Loaded Nachos", "category":"Starters", "price":1300, "station":"Saute", "prepSeconds":360 },
+  { "name":"Wings 'n' Rings", "category":"Starters", "price":1600, "station":"Fry", "prepSeconds":540 },
+  
+  { "name":"Margherita Pizza", "category":"Pizza & Flatbreads", "price":1600, "station":"PizzaOven", "prepSeconds":720 },
+  { "name":"The Caddy (Four Cheese)", "category":"Pizza & Flatbreads", "price":1700, "station":"PizzaOven", "prepSeconds":720 },
+  { "name":"The Linksman (Meat Lovers)", "category":"Pizza & Flatbreads", "price":1900, "station":"PizzaOven", "prepSeconds":780 },
+  { "name":"Southern Comfort (BBQ Chicken)", "category":"Pizza & Flatbreads", "price":1900, "station":"PizzaOven", "prepSeconds":780 },
+  { "name":"Barbecue Chicken Flatbread Pizza", "category":"Pizza & Flatbreads", "price":2100, "station":"PizzaOven", "prepSeconds":780 },
+  
+  { "name":"Street Party Tacos 'Al Pastor'", "category":"Handhelds", "price":1600, "station":"Saute", "prepSeconds":600 },
+  { "name":"Crispy Fried Chicken Tenders", "category":"Handhelds", "price":1600, "station":"Fry", "prepSeconds":540 },
+  { "name":"The Signature Swing Burger", "category":"Handhelds", "price":1800, "station":"FlatTop", "prepSeconds":660 },
+  { "name":"The Impossible™ Hole in One Burger", "category":"Handhelds", "price":1900, "station":"FlatTop", "prepSeconds":600 },
+  { "name":"French Dip Sandwich", "category":"Handhelds", "price":1700, "station":"FlatTop", "prepSeconds":540 },
+  { "name":"Lobster & Shrimp Roll", "category":"Handhelds", "price":2400, "station":"Saute", "prepSeconds":540 },
+  { "name":"Nashville Hot Chicken Sandwich", "category":"Handhelds", "price":1700, "station":"Fry", "prepSeconds":600 },
+  
+  { "name":"Steak Frites", "category":"Entrées & Mains", "price":3800, "station":"FlatTop", "prepSeconds":1200 },
+  { "name":"Shrimp Monique", "category":"Entrées & Mains", "price":2400, "station":"Saute", "prepSeconds":900 },
+  { "name":"Gulf Catch Creole", "category":"Entrées & Mains", "price":2650, "station":"FlatTop", "prepSeconds":960 },
+  { "name":"Golden Fried Seafood Platter", "category":"Entrées & Mains", "price":2300, "station":"Fry", "prepSeconds":780 },
+  { "name":"Make It a Double and Feed an Army", "category":"Entrées & Mains", "price":4600, "station":"Fry", "prepSeconds":1140 },
+  
+  { "name":"Sand Wedge", "category":"Salads & Soups", "price":1300, "station":"Cold", "prepSeconds":300 },
+  { "name":"Classic Caesar Salad", "category":"Salads & Soups", "price":1200, "station":"Cold", "prepSeconds":300 },
+  { "name":"Strawberries & Goat Cheese Salad", "category":"Salads & Soups", "price":1400, "station":"Cold", "prepSeconds":300 },
+  { "name":"Chicken-Andouille Gumbo (Cup)", "category":"Salads & Soups", "price":800, "station":"Boil", "prepSeconds":480 },
+  { "name":"Chicken-Andouille Gumbo (Bowl)", "category":"Salads & Soups", "price":1200, "station":"Boil", "prepSeconds":600 },
+  
+  { "name":"Garlic Grilled Vegetables", "category":"Sides", "price":700, "station":"FlatTop", "prepSeconds":360 },
+  { "name":"Crispy Kettle Fries", "category":"Sides", "price":600, "station":"Fry", "prepSeconds":360 },
+  { "name":"House Green Salad", "category":"Sides", "price":800, "station":"Cold", "prepSeconds":240 },
+  { "name":"Chips and Salsa", "category":"Sides", "price":600, "station":"Cold", "prepSeconds":180 },
+  { "name":"Plus Bowl of Queso (Side)", "category":"Sides", "price":800, "station":"Saute", "prepSeconds":240 },
+  
+  { "name":"The Big Kid Burger", "category":"Kids", "price":1200, "station":"FlatTop", "prepSeconds":540 },
+  { "name":"Fried Chicken Tenders (Kids)", "category":"Kids", "price":1200, "station":"Fry", "prepSeconds":480 },
+  
+  { "name":"On the Green (Key Lime Pie)", "category":"Desserts", "price":800, "station":"Cold", "prepSeconds":240 },
+  { "name":"Very Berry Cheesecake", "category":"Desserts", "price":900, "station":"Cold", "prepSeconds":240 },
+  { "name":"Pecan Chocolate Chip Bread Pudding", "category":"Desserts", "price":1200, "station":"Oven", "prepSeconds":600 },
+  
+  { "name":"Sweet Tea", "category":"Beverages", "price":300, "station":"Bar", "prepSeconds":60 },
+  { "name":"Lemonade", "category":"Beverages", "price":300, "station":"Bar", "prepSeconds":60 },
+  { "name":"Soft Drinks", "category":"Beverages", "price":300, "station":"Bar", "prepSeconds":60 },
+  { "name":"Bottled Water", "category":"Beverages", "price":200, "station":"Bar", "prepSeconds":30 },
+  { "name":"Coffee", "category":"Beverages", "price":300, "station":"Bar", "prepSeconds":120 },
+  { "name":"Hot Chocolate", "category":"Beverages", "price":400, "station":"Bar", "prepSeconds":180 }
+]

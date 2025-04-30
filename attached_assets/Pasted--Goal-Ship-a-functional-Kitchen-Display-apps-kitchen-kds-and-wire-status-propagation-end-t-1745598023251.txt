@@ -1,0 +1,80 @@
+### Goal
+Ship a **functional Kitchen Display (apps/kitchen-kds)** and wire status propagation end-to-end.
+
+### Steps
+1. 🔥  **Clean up legacy code**
+   - Delete root **shared/** directory; adjust any imports to `@swingeats/shared`.
+   - Ensure `tsconfig.json` paths map `"@swingeats/*": ["packages/*/src"]`.
+
+2. 🌐  **Shared websocket client**
+   - In `packages/shared/src/ws.ts` export `createSocket(url)` that:
+     ```ts
+     import { WebSocketMessage } from "./types";
+     export const createSocket = (url: string, onMsg: (m: WebSocketMessage)=>void) => {
+       const ws = new WebSocket(url);
+       ws.onmessage = (ev)=>onMsg(JSON.parse(ev.data));
+       return ws;
+     };
+     ```
+   - Re-export from `packages/shared/src/index.ts`.
+
+3. 🏗 **Server: broadcast enriched order events**
+   - In `server/ws.ts` (new file) add:
+     ```ts
+     import { db, orderItems, menuItems } from "@swingeats/shared/schema";
+     const enrichOrder = async (orderId:string)=>{/* join items+menu, calc late */};
+     ```
+   - Whenever an order or order_item changes, `broadcast({ type:"ORDER_UPDATED", data: await enrichOrder(id) })`.
+   - Compute `isDelayed = now > readyBy + 120s`.
+
+4. 🍳  **KDS UI (apps/kitchen-kds)**
+   - Replace placeholder `<App/>` with:
+     ```tsx
+     const socket = useWebSocket();
+     const { data: tickets } = useTickets(socket); // react-query
+     return (
+       <div className="grid gap-4 p-4 md:grid-cols-3">
+         {tickets.map(t=>(
+           <Card key={t.id} className={statusClass(t)}>
+             <CardHeader>
+               <h3>{t.bayNumber ? `Bay ${t.bayNumber}` : t.bayId}</h3>
+               <span>{t.items.length} items</span>
+             </CardHeader>
+             <CardContent>
+               {t.items.map(i=><p key={i.id}>{i.quantity}× {i.menuItem.name}</p>)}
+             </CardContent>
+             <Button onClick={()=>markReady(t.id)}>Mark ready</Button>
+           </Card>
+         ))}
+       </div>
+     )
+     ```
+   - `statusClass()` returns Tailwind colour:
+     * NEW → `bg-yellow-200`
+     * PREPARING → `bg-blue-200`
+     * READY → `bg-green-200`
+     * DELAYED → `animate-pulse bg-red-400 text-white`
+   - `markReady` calls `PUT /api/orders/{id}/ready` (create this route).
+
+5. 📱  **Server-tablet quick win**
+   - Copy the same ticket component, filter by `status!=="served"`, add a “Serve” button triggering `/api/orders/{id}/served`.
+
+6. 🔒  **Auth shim**
+   - Add simple session middleware: `req.session.role`.
+   - Protect `/apps/server-tablet` and `/apps/kitchen-kds` with a role check; hard-code a test user in seed (`server:pass`, role=`kitchen`).
+
+7. ✅  **Smoke tests**
+   - `packages/shared/__tests__/schema.test.ts` – ensure Zod insert schemas accept valid sample objects.
+   - Add GitHub Action `.github/workflows/ci.yml`:
+     ```yaml
+     run: |
+       pnpm i
+       pnpm lint && pnpm test
+     ```
+
+### Deliverables
+- All code compiles with `pnpm i && pnpm dev` on Node 20.
+- Opening `localhost:5173` (kds) shows live tickets with colours & ready button.
+- Pushing to GitHub runs CI and passes.
+
+Focus on speed – UI can be ugly for now as long as statuses, colours, and buttons work.  

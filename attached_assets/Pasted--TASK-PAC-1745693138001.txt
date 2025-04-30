@@ -1,0 +1,60 @@
+# =====================================================================================
+#  TASK PACK - “Server tablet improvements”
+#  Goals
+#    1.  Bay cards no longer read “Empty” once an order is placed.
+#        • Clicking a bay card opens a side-drawer that lets the server add items and
+#          submits the order.  After submit the bay card shows total items + status.
+#        • “New Order” button at top opens the same drawer but first asks which bay.
+#    2.  Replace flashing timers with a live running mm:ss clock on each order row.
+#
+#  ─── Files to edit only ──────────────────────────────────────────────────────────────
+#     client/src/components/server/BaySelection.tsx        – add click handler
+#     client/src/components/server/ServerView.tsx          – wire “New Order” button
+#     client/src/components/server/ServerOrderDrawer.tsx   – NEW file (drawer form)
+#     client/src/components/server/ActiveOrdersTable.tsx   – show elapsed clock
+#     client/src/components/ui/timer-badge.tsx             – rename → ElapsedClock.tsx
+#
+#  ─── Detailed steps ─────────────────────────────────────────────────────────────────
+#  1.  ElapsedClock.tsx
+#        props: { createdAt: string }
+#        useEffect → setInterval(1 s) → compute diff = Date.now()-createdAt.
+#        Render “m:ss” (pad seconds).
+#
+#  2.  ActiveOrdersTable.tsx
+#        import ElapsedClock and replace the old TimerPill.
+#        <td><ElapsedClock createdAt={order.createdAt} /></td>
+#
+#  3.  ServerOrderDrawer.tsx  (new)
+#        • Drawer (shadcn/ui) slides from right.
+#        • Form: Category select → Menu item select → Qty input → “Add”.
+#        • Local state keeps a cart array.
+#        • Submit button: POST /api/orders with
+#            {
+#              order:{ bayId, specialInstructions:"" },
+#              cart:{ items:[{menuItemId, quantity}] }
+#            }
+#        • On success close drawer, invalidate React-Query ['orders'].
+#
+#  4.  ServerView.tsx
+#        • State:  { open:boolean, bayId:number|null }
+#        • “New Order” button → open drawer with bayId=null.
+#          Drawer first shows Bay picker (dropdown) then the form.
+#        • Pass bayId into <ServerOrderDrawer>.
+#
+#  5.  BaySelection.tsx
+#        • onClick(bay) => setDrawer({ open:true, bayId:bay.id })
+#        • Card label: if bay.orders.length>0 display
+#            “{totalItems} items • {bay.status}”
+#          else “Empty”.
+#
+#  6.  Ensure lists update:
+#        After order POST success:
+#          queryClient.invalidateQueries(['orders','all']);
+#          queryClient.invalidateQueries(['bays']);
+#
+#  7.  Type-check, commit, push
+#        pnpm dlx tsc --noEmit
+#        git add -A
+#        git commit -m "feat(server): bay order drawer + live elapsed clock"
+#        git push
+# =====================================================================================
