@@ -21,7 +21,7 @@ import {
   registerClient, removeClient, getClients,
   broadcastUpdate, sendBayUpdate, sendStationUpdate 
 } from './ws';
-import { startKitchenTimers } from './timers';
+import { startKitchenTimers, updateOrderEstimatedCompletionTime } from './timers';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
