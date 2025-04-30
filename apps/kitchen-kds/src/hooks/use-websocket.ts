@@ -13,48 +13,54 @@ export const useWebSocket = (): WebSocketHook => {
   const socketRef = useRef<WebSocket | null>(null);
   
   useEffect(() => {
-    // Setup WebSocket connection
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    // Setup WebSocket connection - using the same origin approach
+    const base = window.location.origin.replace(/^http/, "ws") + "/ws?client=kitchen-app";
+    console.log('Connecting to WebSocket at:', base);
     
-    const socket = new WebSocket(wsUrl);
-    socketRef.current = socket;
-    
-    socket.onopen = () => {
-      console.log('WebSocket connection established');
-      setReadyState(WebSocket.OPEN);
+    try {
+      const socket = new WebSocket(base);
+      socketRef.current = socket;
       
-      // Register as kitchen client
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ 
-          type: "register", 
-          data: { clientType: "kitchen" } 
-        }));
-      }
-    };
-    
-    socket.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        setLastMessage(message);
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
-    };
-    
-    socket.onclose = () => {
-      console.log('WebSocket connection closed');
+      socket.onopen = () => {
+        console.log('WebSocket connection established');
+        setReadyState(WebSocket.OPEN);
+        
+        // Register as kitchen client
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ 
+            type: "register", 
+            data: { clientType: "kitchen" } 
+          }));
+        }
+      };
+      
+      socket.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          setLastMessage(message);
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
+      
+      socket.onclose = () => {
+        console.log('WebSocket connection closed');
+        setReadyState(WebSocket.CLOSED);
+      };
+      
+      socket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+      
+      // Cleanup on unmount
+      return () => {
+        socket.close();
+      };
+    } catch (error) {
+      console.error('Failed to establish WebSocket connection:', error);
       setReadyState(WebSocket.CLOSED);
-    };
-    
-    socket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-    
-    // Cleanup on unmount
-    return () => {
-      socket.close();
-    };
+      return () => {};
+    }
   }, []);
   
   const sendMessage = useCallback((data: any) => {
