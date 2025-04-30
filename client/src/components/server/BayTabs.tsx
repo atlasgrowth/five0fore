@@ -11,27 +11,24 @@ export default function BayTabs({ orders, onTabChange }: BayTabsProps) {
   // Set initial tab to ALL by default
   const [activeTab, setActiveTab] = useState("ALL");
   
-  // Filter out all completed orders first (SERVED and CLOSED)
-  const activeOrders = orders.filter(o => {
-    const status = o.status.toUpperCase();
-    return status !== "SERVED" && status !== "CLOSED";
-  });
-  
   // Compute counts for each status
-  const newOrders = activeOrders.filter(o => ["NEW"].includes(o.status.toUpperCase())).length;
-  const cooking = activeOrders.filter(o => o.status.toUpperCase() === "COOKING").length;
-  const plating = activeOrders.filter(o => o.status.toUpperCase() === "PLATING").length;
-  const ready = activeOrders.filter(o => o.status.toUpperCase() === "READY").length;
-  const delayed = activeOrders.filter(o => o.isDelayed).length;
-  
-  // Get count of completed orders by status
+  const newOrders = orders.filter(o => o.status.toUpperCase() === "NEW").length;
+  const cooking = orders.filter(o => o.status.toUpperCase() === "COOKING").length;
+  const plating = orders.filter(o => o.status.toUpperCase() === "PLATING").length;
+  const ready = orders.filter(o => o.status.toUpperCase() === "READY").length;
   const served = orders.filter(o => o.status.toUpperCase() === "SERVED").length;
   const closed = orders.filter(o => o.status.toUpperCase() === "CLOSED").length;
-  const completed = served + closed;
+  const delayed = orders.filter(o => o.isDelayed).length;
+  
+  // Calculate "All Active" count (everything that's not CLOSED or CANCELLED)
+  const allActive = orders.filter(o => {
+    const status = o.status.toUpperCase();
+    return status !== "CLOSED" && status !== "CANCELLED";
+  }).length;
   
   // Main pipeline tabs in the correct flow order: NEW→COOKING→PLATING→READY→SERVED→CLOSED
   const tabs = [
-    { id: "ALL", label: "All Active", count: activeOrders.length },
+    { id: "ALL", label: "All Active", count: allActive },
     { id: "NEW", label: "New", count: newOrders },
     { id: "COOKING", label: "Cooking", count: cooking },
     { id: "PLATING", label: "Plating", count: plating },

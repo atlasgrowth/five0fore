@@ -126,7 +126,7 @@ export default function ServerView() {
     if (!orders) return [];
     return orders.filter(order => 
       order.bayId === bayId && 
-      !['SERVED', 'CLOSED', 'CANCELLED'].includes(order.status.toUpperCase())
+      !['CLOSED', 'CANCELLED'].includes(order.status.toUpperCase())
     );
   };
 
