@@ -581,10 +581,16 @@ function OrderCard({
                   if (order.status === OrderStatus.CANCELLED) return "bg-red-100 text-red-800";
                   
                   // For active orders, choose color based on time difference
-                  if (diffMinutes < -5) return "bg-red-100 text-red-800"; // More than 5 min late
-                  if (diffMinutes < 0) return "bg-amber-100 text-amber-800"; // Up to 5 min late
-                  if (diffMinutes <= 5) return "bg-green-100 text-green-800"; // On time (within 5 min)
-                  return "bg-blue-100 text-blue-800"; // Ahead of schedule
+                  // Only 2 options now: On Time (green) or Late (red/amber based on how late)
+                  if (diffMinutes < 0) {
+                    // If late, choose color based on severity
+                    return diffMinutes < -5 
+                      ? "bg-red-100 text-red-800"    // More than 5 min late: Red
+                      : "bg-amber-100 text-amber-800"; // Less than 5 min late: Amber
+                  } else {
+                    // If on time or ahead: always green
+                    return "bg-green-100 text-green-800"; 
+                  }
                 })()
               )}>
                 {(() => {
@@ -594,12 +600,7 @@ function OrderCard({
                   const diffMs = estimatedTime.getTime() - currentTime.getTime();
                   const diffMinutes = Math.round(diffMs / 60000);
                   
-                  // Get original expected time
-                  const creationTime = new Date(order.createdAt);
-                  const originalEstimatedMs = estimatedTime.getTime() - creationTime.getTime();
-                  const originalMinutes = Math.round(originalEstimatedMs / 60000);
-                  
-                  // If order is READY, SERVED, CLOSED, etc. show final status instead of time diff
+                  // Show status for completed orders
                   if (order.status === OrderStatus.READY) {
                     return "Ready";
                   } else if (order.status === OrderStatus.SERVED) {
@@ -610,13 +611,12 @@ function OrderCard({
                     return "Cancelled";
                   }
                   
-                  // For active orders, show time difference
+                  // For active orders, only show "Late" with minutes if behind
+                  // Otherwise just show "On time"
                   if (diffMinutes < 0) {
-                    return `${Math.abs(diffMinutes)}m behind`;
-                  } else if (diffMinutes === 0) {
-                    return "On time";
+                    return `${Math.abs(diffMinutes)}m Late`;
                   } else {
-                    return `${diffMinutes}m ahead`;
+                    return "On time";
                   }
                 })()}
               </span>
