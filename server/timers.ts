@@ -162,7 +162,7 @@ export async function updateOrderEstimatedCompletionTime(orderId: string) {
     const completedItems = items.filter(item => 
       item.status === OrderItemStatus.READY || 
       item.status === OrderItemStatus.DELIVERED || 
-      item.status === 'SERVED' // Keep string version for backward compatibility
+      item.status === OrderItemStatus.SERVED // Using enum now that we've defined it
     ).length;
     
     // Progress from 0.0 (no items done) to 1.0 (all items done)

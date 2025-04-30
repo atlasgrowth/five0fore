@@ -1,6 +1,32 @@
 import { Order, OrderItem, Bay } from "./schema";
 
 /**
+ * Order item status enum for managing item progress
+ */
+export enum OrderItemStatus {
+  NEW = "NEW",
+  COOKING = "COOKING",
+  PLATING = "PLATING",
+  READY = "READY",
+  DELIVERED = "DELIVERED",
+  SERVED = "SERVED", // For backward compatibility
+  VOIDED = "VOIDED"
+}
+
+/**
+ * Order status enum for tracking order lifecycle
+ */
+export enum OrderStatus {
+  NEW = "NEW",
+  COOKING = "COOKING",
+  PLATING = "PLATING",
+  READY = "READY",
+  SERVED = "SERVED",
+  CLOSED = "CLOSED",
+  CANCELLED = "CANCELLED"
+}
+
+/**
  * Possible WebSocket message types used by the application
  */
 export type WebSocketMessageType = 

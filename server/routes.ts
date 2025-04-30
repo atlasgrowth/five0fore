@@ -1111,5 +1111,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // New endpoint to force recalculation of estimated completion time for a single order
+  app.post('/api/order/:id/recalculate-time', async (req: Request, res: Response) => {
+    try {
+      const orderId = req.params.id;
+      
+      // Check if order exists
+      const order = await storage.getOrderById(orderId);
+      if (!order) {
+        return res.status(404).json({ message: 'Order not found' });
+      }
+      
+      console.log(`Force recalculating time for order ${orderId}`);
+      
+      // Dynamically update the order's estimated completion time
+      const updatedOrder = await updateOrderEstimatedCompletionTime(orderId);
+      
+      if (!updatedOrder) {
+        return res.status(500).json({ message: 'Failed to update order time' });
+      }
+      
+      // Return the updated order
+      res.json({
+        success: true,
+        order: toOrderDTO(updatedOrder),
+        message: `Updated estimated completion time to ${updatedOrder.estimatedCompletionTime?.toISOString()}`
+      });
+    } catch (error) {
+      console.error('Error recalculating order time:', error);
+      res.status(500).json({ message: 'Failed to recalculate order time' });
+    }
+  });
+  
+  // New endpoint to force recalculation of all active orders
+  app.post('/api/orders/recalculate-all-times', async (req: Request, res: Response) => {
+    try {
+      console.log('Force recalculating times for all active orders');
+      
+      // Get all active orders
+      const activeOrders = await storage.getActiveOrders();
+      
+      if (activeOrders.length === 0) {
+        return res.json({
+          success: true,
+          message: 'No active orders to update',
+          updatedOrders: []
+        });
+      }
+      
+      // Update each order's estimated completion time
+      const updatedOrderIds = [];
+      const failed = [];
+      
+      for (const order of activeOrders) {
+        try {
+          const updatedOrder = await updateOrderEstimatedCompletionTime(order.id);
+          if (updatedOrder) {
+            updatedOrderIds.push(order.id);
+          } else {
+            failed.push(order.id);
+          }
+        } catch (err) {
+          console.error(`Error updating order ${order.id}: `, err);
+          failed.push(order.id);
+        }
+      }
+      
+      // Get latest versions of the orders
+      const freshOrders = await storage.getActiveOrders();
+      
+      // Return results
+      res.json({
+        success: true,
+        message: `Updated ${updatedOrderIds.length} orders. Failed to update ${failed.length} orders.`,
+        updatedOrders: freshOrders.map(toOrderDTO)
+      });
+    } catch (error) {
+      console.error('Error recalculating all order times:', error);
+      res.status(500).json({ message: 'Failed to recalculate order times', error: error.message });
+    }
+  });
+  
   return httpServer;
 }
