@@ -20,6 +20,7 @@ import {
 
 // Global interval handlers
 let statusSyncTimerId: NodeJS.Timeout | null = null;
+let timeRecalcTimerId: NodeJS.Timeout | null = null;
 
 /**
  * Check bay status for all bays that have active orders and update accordingly
@@ -103,6 +104,43 @@ async function synchronizeBayStatus() {
 }
 
 /**
+ * Periodically recalculate estimated completion times for all active orders
+ */
+async function recalculateAllOrderTimes() {
+  try {
+    console.log('Running recalculate times job...');
+    
+    // Get all active orders
+    const activeOrders = await storage.getActiveOrders();
+    
+    if (activeOrders.length === 0) {
+      console.log('No active orders to update times for.');
+      return;
+    }
+    
+    console.log(`Found ${activeOrders.length} active orders to update times for.`);
+    
+    // Update each order's estimated completion time
+    const updatedOrderIds = [];
+    
+    for (const order of activeOrders) {
+      try {
+        const updatedOrder = await updateOrderEstimatedCompletionTime(order.id);
+        if (updatedOrder) {
+          updatedOrderIds.push(order.id);
+        }
+      } catch (err) {
+        console.error(`Error updating order ${order.id} time: `, err);
+      }
+    }
+    
+    console.log(`Successfully updated ${updatedOrderIds.length} order times.`);
+  } catch (error) {
+    console.error('Error in recalculateAllOrderTimes job:', error);
+  }
+}
+
+/**
  * Start kitchen background timers 
  */
 export function startKitchenTimers() {
@@ -113,6 +151,15 @@ export function startKitchenTimers() {
     clearInterval(statusSyncTimerId);
   }
   statusSyncTimerId = setInterval(synchronizeBayStatus, 3000);
+  
+  // Order time recalculation - run every 10 seconds
+  if (timeRecalcTimerId) {
+    clearInterval(timeRecalcTimerId);
+  }
+  timeRecalcTimerId = setInterval(recalculateAllOrderTimes, 10000);
+  
+  // Run an immediate recalculation of all order times on startup
+  recalculateAllOrderTimes();
 }
 
 /**
@@ -123,6 +170,12 @@ export function stopKitchenTimers() {
     clearInterval(statusSyncTimerId);
     statusSyncTimerId = null;
   }
+  
+  if (timeRecalcTimerId) {
+    clearInterval(timeRecalcTimerId);
+    timeRecalcTimerId = null;
+  }
+  
   console.log('Stopped all kitchen timer background tasks');
 }
 
@@ -146,7 +199,9 @@ export async function updateOrderEstimatedCompletionTime(orderId: string) {
       return undefined;
     }
     
-    const { order, items } = orderWithItems;
+    // Extract the order and items from the result
+    const items = orderWithItems.items;
+    const order = orderWithItems;
     
     // Calculate current kitchen load based on number of active orders
     // This is a simple approach - in a real system, you might have a more complex calculation
