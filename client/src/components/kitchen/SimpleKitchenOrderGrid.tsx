@@ -849,12 +849,12 @@ function OrderCard({
         </div>
 
         {/* BOTTOM ROW with times and actions combined for compactness */}
-        <div className="flex justify-between items-center border-t pt-1 text-xs">
-          <div className="flex flex-row space-x-2 items-center">
+        <div className="flex justify-between items-center border-t pt-2 mt-2 text-sm">
+          <div className="flex flex-row space-x-3 items-center">
             {/* Placed time */}
             <div>
-              <span className="text-xs text-neutral-500 mr-1">Placed:</span>
-              <span className="text-xs font-medium">
+              <span className="text-sm text-neutral-600 mr-1">Placed:</span>
+              <span className="text-sm font-medium">
                 {new Date(order.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
               </span>
             </div>
@@ -862,8 +862,8 @@ function OrderCard({
             {/* Completion time (if available) */}
             {order.estimatedCompletionTime && (
               <div>
-                <span className="text-xs text-neutral-500 mr-1">ETA:</span>
-                <span className="text-xs font-medium">
+                <span className="text-sm text-neutral-600 mr-1">ETA:</span>
+                <span className="text-sm font-medium">
                   {new Date(order.estimatedCompletionTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                 </span>
               </div>
@@ -872,7 +872,7 @@ function OrderCard({
             {/* Time status indicator */}
             {diffMinutes !== null && (
               <div className={cn(
-                "text-xs font-medium", 
+                "text-sm font-medium", 
                 diffMinutes < 0 
                   ? diffMinutes < -5 ? "text-red-600" : "text-amber-600" 
                   : "text-green-600"
@@ -886,12 +886,12 @@ function OrderCard({
             )}
           </div>
 
-          {/* Action buttons - even smaller */}
+          {/* Action buttons - larger and more visible */}
           <div className="flex">
             {/* Only show mark ready button when cooking or plating */}
             {(order.status === OrderStatus.COOKING || order.status === OrderStatus.PLATING) && (
               <button 
-                className="px-2 py-0.5 rounded text-xs font-medium bg-green-500 hover:bg-green-600 text-white"
+                className="px-3 py-1 rounded text-sm font-medium bg-green-500 hover:bg-green-600 text-white"
                 onClick={() => markOrderAsReady(order.id)}
               >
                 Ready
@@ -901,7 +901,7 @@ function OrderCard({
             {/* Only show close button when served */}
             {order.status === OrderStatus.SERVED && (
               <button 
-                className="px-2 py-0.5 rounded text-xs font-medium bg-gray-500 hover:bg-gray-600 text-white ml-1"
+                className="px-3 py-1 rounded text-sm font-medium bg-gray-500 hover:bg-gray-600 text-white ml-2"
                 onClick={() => closeOrder(order.id)}
               >
                 Close
@@ -1065,13 +1065,13 @@ function OrderItems({
           if (remainingSeconds <= 0) {
             // Ready to check
             return (
-              <div className="absolute -top-2 right-2 flex items-center gap-1">
-                <div className="bg-green-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm animate-pulse">
+              <div className="ml-2 flex items-center gap-1">
+                <div className="bg-green-500 text-white px-3 py-1 text-sm font-bold rounded shadow-sm animate-pulse">
                   READY TO CHECK
                 </div>
                 {isCriticallyLate && !acknowledgedItems[item.id] && (
                   <button 
-                    className="bg-red-700 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm hover:bg-red-800"
+                    className="bg-red-700 text-white px-3 py-1 text-sm font-bold rounded shadow-sm hover:bg-red-800"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleAcknowledgeItem(item.id);
@@ -1084,19 +1084,19 @@ function OrderItems({
             );
           } else if (remainingSeconds < 30) {
             return (
-              <div className="absolute -top-2 right-2 bg-green-600 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm">
+              <div className="ml-2 bg-green-600 text-white px-3 py-1 text-sm font-bold rounded shadow-sm">
                 {minutes}:{seconds.toString().padStart(2, '0')}
               </div>
             );
           } else if (remainingSeconds < 60) {
             return (
-              <div className="absolute -top-2 right-2 bg-amber-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm">
+              <div className="ml-2 bg-amber-500 text-white px-3 py-1 text-sm font-bold rounded shadow-sm">
                 {minutes}:{seconds.toString().padStart(2, '0')}
               </div>
             );
           } else {
             return (
-              <div className="absolute -top-2 right-2 bg-blue-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm">
+              <div className="ml-2 bg-blue-500 text-white px-3 py-1 text-sm font-bold rounded shadow-sm">
                 {minutes}:{seconds.toString().padStart(2, '0')}
               </div>
             );
@@ -1115,7 +1115,7 @@ function OrderItems({
 
           if (longestCookItem && longestCookItem.id === item.id) {
             return (
-              <div className="absolute -top-2 -left-2 bg-blue-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm">
+              <div className="ml-0 mb-2 bg-blue-500 text-white px-3 py-1 text-sm font-bold rounded shadow-sm inline-block">
                 NEXT UP
               </div>
             );
@@ -1174,10 +1174,10 @@ function OrderItems({
               {/* Item details */}
               <div className="flex-1 min-w-0">
                 {/* Item name and quantity */}
-                <div className="flex items-center text-sm font-medium mb-0.5">
-                  <span className="truncate mr-1.5">{item.menuItem?.name || "Unknown Item"}</span>
+                <div className="flex items-center text-base font-medium mb-1">
+                  <span className="mr-1.5">{item.menuItem?.name || "Unknown Item"}</span>
                   {item.quantity > 1 && (
-                    <span className="bg-neutral-100 px-1.5 py-0.5 text-xs rounded-full text-neutral-700 flex-shrink-0">
+                    <span className="bg-neutral-100 px-2 py-0.5 text-sm rounded-full text-neutral-700 flex-shrink-0">
                       x{item.quantity}
                     </span>
                   )}
@@ -1185,9 +1185,9 @@ function OrderItems({
 
                 {/* Customizations */}
                 {item.customizations && item.customizations.length > 0 && (
-                  <div className="text-xs bg-blue-50 p-1.5 rounded mt-1 border border-blue-200">
-                    <div className="font-medium text-blue-700 mb-0.5">Customizations:</div>
-                    <ul className="space-y-0.5">
+                  <div className="text-sm bg-blue-50 p-2 rounded mt-2 border border-blue-200">
+                    <div className="font-medium text-blue-700 mb-1">Customizations:</div>
+                    <ul className="space-y-1">
                       {item.customizations.map((customization: any, idx: number) => (
                         <li key={idx} className="text-blue-800">
                           <span className="font-medium">{customization.categoryName}:</span> {customization.options.map((opt: any) => opt.name).join(', ')}
@@ -1199,14 +1199,14 @@ function OrderItems({
 
                 {/* Notes */}
                 {item.notes && (
-                  <div className="text-xs bg-amber-50 p-1.5 rounded mt-1 border border-amber-200">
-                    <div className="font-medium text-amber-700 mb-0.5">Special Instructions:</div>
+                  <div className="text-sm bg-amber-50 p-2 rounded mt-2 border border-amber-200">
+                    <div className="font-medium text-amber-700 mb-1">Special Instructions:</div>
                     <div className="text-amber-800 italic">{item.notes}</div>
                   </div>
                 )}
 
                 {/* Cook time */}
-                <div className="text-xs text-neutral-500 mt-1">
+                <div className="text-sm text-neutral-600 mt-2 font-medium">
                   {(() => {
                     const totalSeconds = item.cookSeconds || item.menuItem?.prep_seconds || 0;
                     const minutes = Math.floor(totalSeconds / 60);
@@ -1219,7 +1219,7 @@ function OrderItems({
               {/* Item status */}
               <div className="ml-2 flex-shrink-0">
                 {item.firedAt && (
-                  <div className="text-[10px] text-neutral-500 whitespace-nowrap">
+                  <div className="text-sm text-neutral-600 whitespace-nowrap font-medium">
                     {item.status === OrderItemStatus.READY ? (
                       <>Ready at: {new Date(item.firedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</>
                     ) : item.status !== OrderItemStatus.COOKING ? (
