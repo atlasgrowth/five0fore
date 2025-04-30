@@ -138,31 +138,23 @@ function StartTimer({
     // Simple wait message when there's not enough information yet
     return (
       <div className="flex items-center ml-2">
-        <div className="p-1 text-xs bg-orange-100 text-orange-700 rounded flex items-center font-bold animate-pulse">
+        <div className="p-1 text-xs bg-gray-100 text-gray-700 rounded flex items-center">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          WAIT TO START
+          Wait to start
         </div>
       </div>
     );
   }
   
-  // Choose color based on time left
-  const getBgColor = () => {
-    if (!timeToStart) return "bg-orange-100 text-orange-700";
-    if (timeToStart < 60) return "bg-red-100 text-red-700 animate-pulse"; // less than 1 minute, make it pulsing red
-    if (timeToStart < 300) return "bg-amber-100 text-amber-700"; // less than 5 minutes
-    return "bg-gray-100 text-gray-700"; // more than 5 minutes
-  };
-  
   return (
     <div className="flex items-center ml-2">
-      <div className={`p-1 text-xs rounded flex items-center font-bold ${getBgColor()}`}>
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="p-1 text-xs bg-gray-100 text-gray-800 rounded flex items-center font-medium">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        START IN {timeToStart !== null ? formatTime(timeToStart) : '--:--'}
+        Start in {timeToStart !== null ? formatTime(timeToStart) : '--:--'}
       </div>
     </div>
   );
@@ -200,27 +192,24 @@ function CookingTimer({ firedAt, cookSeconds }: { firedAt: string, cookSeconds: 
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
   
-  // Determine color and animation based on progress
-  const getStyle = () => {
-    if (percentage >= 100) return "text-white bg-red-600 animate-pulse";
-    if (percentage >= 90) return "text-white bg-amber-600";
-    if (percentage >= 75) return "text-amber-900 bg-amber-100";
-    return "text-green-900 bg-green-100";
+  // Determine color based on progress
+  const getColor = () => {
+    if (percentage >= 100) return "text-red-600";
+    if (percentage >= 90) return "text-amber-600";
+    if (percentage >= 75) return "text-amber-500";
+    return "text-green-600";
   };
   
   return (
     <div className="ml-2 flex items-center">
-      <div className="relative w-16 h-5 bg-gray-200 rounded-full overflow-hidden shadow-inner">
+      <div className="relative w-16 h-4 bg-gray-200 rounded-full overflow-hidden">
         <div 
           className={`absolute left-0 top-0 h-full ${percentage >= 90 ? 'bg-red-500' : percentage >= 75 ? 'bg-amber-500' : 'bg-green-500'}`}
           style={{ width: `${percentage}%` }}
         ></div>
       </div>
-      <span className={`ml-1 px-1.5 py-0.5 text-xs font-bold rounded ${getStyle()}`}>
+      <span className={`ml-1 text-xs font-medium ${getColor()}`}>
         {formatTime(timeLeft)}
-      </span>
-      <span className="ml-1 text-xs font-bold text-gray-700">
-        COOKING
       </span>
     </div>
   );
@@ -572,11 +561,14 @@ function OrderCard({
                           </span>
                         </div>
                         
-                        {/* Cooking items with timers and action buttons */}
-                        {item.status === OrderItemStatus.COOKING && (
+                        {/* Status labels with appropriate indicators and action buttons */}
+                        {item.status === OrderItemStatus.COOKING && item.firedAt && (
                           <div className="ml-2 flex items-center">
+                            <span className="text-xs font-medium bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">
+                              Cooking
+                            </span>
                             <CookingTimer 
-                              firedAt={item.firedAt ? item.firedAt.toString() : new Date().toISOString()} 
+                              firedAt={item.firedAt} 
                               cookSeconds={item.cookSeconds || item.menuItem?.prep_seconds || 300}
                             />
                             <button 
@@ -631,39 +623,20 @@ function OrderCard({
                           </span>
                         )}
                         
-                        {/* Every single item should have a timer */}
-                        {item.menuItem?.prep_seconds && (
-                          item.status === OrderItemStatus.COOKING ? (
-                            // If currently cooking, show the cooking timer
-                            <CookingTimer 
-                              firedAt={item.firedAt || new Date().toISOString()} 
-                              cookSeconds={item.cookSeconds || item.menuItem?.prep_seconds || 300}
-                            />
-                          ) : !item.status ? (
-                            // If not yet started, show when to start
-                            <StartTimer 
-                              orderCreatedAt={order.createdAt}
-                              cookSeconds={item.menuItem.prep_seconds}
-                              longestCookItem={
-                                orderDetails?.items?.reduce((longest, curr) => {
-                                  const currCookTime = curr.cookSeconds || curr.menuItem?.prep_seconds || 0;
-                                  const longestCookTime = longest.cookSeconds || longest.menuItem?.prep_seconds || 0;
-                                  return currCookTime > longestCookTime ? curr : longest;
-                                }, item) === item
-                              }
-                              orderItems={orderDetails.items}
-                            />
-                          ) : (
-                            // For items in other states, still show a simple timer
-                            <div className="ml-2 flex items-center">
-                              <div className="p-1 text-xs bg-gray-100 text-gray-700 rounded flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                {item.status}
-                              </div>
-                            </div>
-                          )
+                        {/* Pending items (show when to start cooking) */}
+                        {!item.status && item.menuItem?.prep_seconds && (
+                          <StartTimer 
+                            orderCreatedAt={order.createdAt}
+                            cookSeconds={item.menuItem.prep_seconds}
+                            longestCookItem={
+                              orderDetails?.items?.reduce((longest, curr) => {
+                                const currCookTime = curr.cookSeconds || curr.menuItem?.prep_seconds || 0;
+                                const longestCookTime = longest.cookSeconds || longest.menuItem?.prep_seconds || 0;
+                                return currCookTime > longestCookTime ? curr : longest;
+                              }, item) === item
+                            }
+                            orderItems={orderDetails.items}
+                          />
                         )}
                       </div>
                       
