@@ -45,6 +45,7 @@ export interface IStorage {
   getOrdersByStatus(status: string): Promise<OrderSummary[]>;
   createOrder(order: InsertOrder, cart: Cart): Promise<Order>;
   updateOrderStatus(id: string, status: string): Promise<Order | undefined>;
+  markOrderClosed(id: string): Promise<Order | undefined>; // New method to properly close orders
   
   // Order Items
   getOrderItems(orderId: string): Promise<OrderItem[]>;
@@ -495,6 +496,37 @@ export class DatabaseStorage implements IStorage {
       .set({ status: status.toUpperCase() })
       .where(eq(orders.id, id))
       .returning();
+    
+    return updatedOrder || undefined;
+  }
+
+  async markOrderClosed(id: string): Promise<Order | undefined> {
+    // Mark order as closed and set closedAt timestamp
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({ 
+        status: "CLOSED", 
+        closedAt: new Date() 
+      })
+      .where(eq(orders.id, id))
+      .returning();
+    
+    // If order updated successfully and bay status should be updated
+    if (updatedOrder) {
+      try {
+        // Find all non-closed orders for this bay to determine new bay status
+        const bayOrders = await this.getOrdersByBayId(updatedOrder.bayId);
+        const activeOrdersForBay = bayOrders.filter(order => order.status !== 'CLOSED' && order.status !== 'CANCELLED');
+        
+        // If no active orders left, update bay status to AVAILABLE
+        if (activeOrdersForBay.length === 0) {
+          await this.updateBayStatus(updatedOrder.bayId, 'AVAILABLE');
+        }
+      } catch (error) {
+        console.error(`Error updating bay status after closing order ${id}:`, error);
+        // Continue despite error - we don't want to fail the order closing if bay status update fails
+      }
+    }
     
     return updatedOrder || undefined;
   }

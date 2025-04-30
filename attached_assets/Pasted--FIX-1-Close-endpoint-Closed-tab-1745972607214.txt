@@ -1,0 +1,65 @@
+# ===========================================================
+#  FIX 1: Close endpoint + Closed tab refresh
+#  Files: server/routes.ts, storage.ts, client ServerView
+# ===========================================================
+
+#############################
+# 1. storage.ts add helper
+#############################
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: server/storage.ts
+@@
+   async markOrderServed(orderId: string) { … },   // existing
+
++  async markOrderClosed(orderId: string) {
++    await db.update(orders)
++      .set({ status: "CLOSED", closedAt: new Date() })
++      .where(eq(orders.id, orderId));
++    return db.query.orders.findFirst({ where: eq(orders.id, orderId) });
++  },
+*** End Patch
+PATCH
+
+##################################
+# 2. routes.ts new close endpoint
+##################################
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: server/routes.ts
+@@
+ router.post("/api/order/:id/serve", …)
+
++router.post("/api/order/:id/close", async (req,res)=>{
++  const ord = await storage.markOrderClosed(req.params.id);
++  broadcast("ORDER_CLOSED", toDTO(ord));
++  res.json(toDTO(ord));
++});
+*** End Patch
+PATCH
+
+#########################################################
+# 3. client/components/server/ActiveOrdersTable.tsx
+#    (or wherever $ icon lives)
+#########################################################
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: client/src/components/server/ActiveOrdersTable.tsx
+@@
+-  const handleClose = (id)=>{/* TODO */}
++  const qc = useQueryClient();
++  const handleClose = async (id:string)=>{
++    await apiRequest("POST", `/api/order/${id}/close`);
++    qc.invalidateQueries({ queryKey:["orders","served"] });
++    qc.invalidateQueries({ queryKey:["orders","closed"] });
++  };
+*** End Patch
+PATCH
+
+################
+# 4. commit push
+################
+pnpm dlx tsc --noEmit
+git add -A
+git commit -m "feat(server): close order endpoint + closed tab updates"
+git push
