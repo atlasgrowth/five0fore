@@ -2,9 +2,11 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { 
-  insertOrderSchema, type Cart, OrderItemStatus, OrderStatus
+  insertOrderSchema, type Cart, OrderItemStatus, OrderStatus, orders
 } from "@shared/schema";
 import {
   WebSocketMessage, WebSocketMessageType, 
@@ -569,12 +571,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const orderId = req.params.id;
       
-      // Use the new markOrderClosed method which properly sets the closedAt timestamp
-      // and handles bay status updates
-      const updatedOrder = await storage.markOrderClosed(orderId);
+      // First mark all order items as delivered if they aren't already
+      const orderItems = await storage.getOrderItems(orderId);
+      for (const item of orderItems) {
+        if (item.status !== OrderItemStatus.DELIVERED) {
+          await storage.markOrderItemDelivered(item.id);
+        }
+      }
+      
+      // Update the order status to SERVED and manually set the closedAt timestamp
+      // This will automatically update the bay status if needed via updateOrderStatusBasedOnItems
+      const [updatedOrder] = await db
+        .update(orders)
+        .set({ 
+          status: OrderStatus.SERVED, 
+          closedAt: new Date() 
+        })
+        .where(eq(orders.id, orderId))
+        .returning();
       
       if (!updatedOrder) {
         return res.status(404).json({ message: 'Order not found' });
+      }
+      
+      // Check if there are active orders for this bay
+      const bayOrders = await storage.getOrdersByBayId(updatedOrder.bayId);
+      const activeOrders = bayOrders.filter(order => 
+        order.id !== orderId && 
+        order.status !== OrderStatus.SERVED && 
+        order.status !== "CANCELLED"
+      );
+      
+      // If no more active orders, set bay to empty
+      if (activeOrders.length === 0) {
+        await storage.updateBayStatus(updatedOrder.bayId, "empty");
       }
       
       // Get full order details
