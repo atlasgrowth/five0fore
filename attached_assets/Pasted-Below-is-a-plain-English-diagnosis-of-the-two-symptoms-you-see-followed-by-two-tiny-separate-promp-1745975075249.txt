@@ -1,0 +1,153 @@
+Below is a plain-English diagnosis of the two symptoms you see, followed by two tiny, separate prompts you can hand to the Replit agent.
+Run Prompt 1 first (bay colours), verify; then run Prompt 2 (Closed tab). No other files touched.
+
+1 Why the bay cards never change colour
+When you place an order we correctly set bay.status = "NEW".
+
+Every later status change (COOKING / PLATING / READY / SERVED) updates the order rows but never re-evaluates the bay.
+
+The card component relies solely on bay.status, so it stays blue forever.
+
+Minimal fix
+After every markFired, markReady, markServed, call recalcBayStatus(bayId)
+– The helper looks at all non-closed order items for that bay and sets:
+
+
+Rule	Resulting bay.status
+≥1 NEW items	NEW
+none NEW, ≥1 COOKING	COOKING
+none NEW/COOKING, ≥1 PLATING	PLATING
+all items READY	READY
+no active items	AVAILABLE
+Broadcast bay_updated WS message (your client already listens).
+
+Map status → colour in BaySelection.tsx.
+
+2 Why “Close order” never moves the ticket out of Served
+The close button calls POST /api/order/:id/close, but that endpoint never changes the status (it only sets closedAt).
+
+The Served tab filters status === "SERVED" so the row never leaves.
+
+Closed tab filters status === "CLOSED" but the enum doesn’t include "CLOSED"—it silently discards everything.
+
+Minimal fix
+Add "CLOSED" to the OrderStatus enum and Drizzle schema.
+
+In markOrderClosed set status = "CLOSED" and closedAt = now.
+
+Closed tab fetches status=CLOSED; Served tab stays status=SERVED.
+
+All Active count = every order whose status ∈ {NEW, COOKING, PLATING, READY, SERVED} (but not CLOSED / CANCELLED).
+
+Prompt 1 — live bay colours
+csharp
+Copy
+Edit
+# ───── BAY STATUS RECALC ─────
+# Files: server/storage.ts, client/components/server/BaySelection.tsx
+#
+# 1. storage.ts  add helper
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: server/storage.ts
+@@
+ const storage = {
++  async recalcBayStatus(bayId:string){
++    const rows = await db.select({ status: orderItems.status })
++       .from(orderItems)
++       .leftJoin(orders, eq(orders.id, orderItems.orderId))
++       .where(and(eq(orders.bayId, bayId),
++                  notInArray(orders.status, ["CLOSED","CANCELLED"])));
++
++    const s = rows.map(r=>r.status);
++    let bayStatus:"AVAILABLE"|"NEW"|"COOKING"|"PLATING"|"READY"="AVAILABLE";
++    if(s.includes("NEW"))           bayStatus="NEW";
++    else if(s.includes("COOKING"))  bayStatus="COOKING";
++    else if(s.includes("PLATING"))  bayStatus="PLATING";
++    else if(s.length && s.every(x=>x==="READY")) bayStatus="READY";
++
++    await db.update(bays).set({status:bayStatus}).where(eq(bays.id,bayId));
++    const bay = await db.query.bays.findFirst({ where:eq(bays.id,bayId) });
++    broadcast("bay_updated",{bay:toBayDTO(bay)});
++  },
+*** End Patch
+PATCH
+# call helper inside markFired / markReady / markServed
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: server/storage.ts
+@@
+   async markFired(id:string){ …existing… 
+-    return item;
++    await this.recalcBayStatus(item.bayId);
++    return item;
+   },
+   async markReady(id:string){ …existing…
+-    return item;
++    await this.recalcBayStatus(item.bayId);
++    return item;
+   },
+   async markOrderServed(orderId:string){ …existing…
+-    return ord;
++    await this.recalcBayStatus(ord.bayId);
++    return ord;
+   },
+*** End Patch
+PATCH
+#
+# 2. BaySelection colour map
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: client/src/components/server/BaySelection.tsx
+@@
+-const colour = status==="NEW" ? "bg-blue-100"
+-             : "bg-gray-100";
++const colour = status==="NEW"      ? "bg-blue-100"
++             : status==="COOKING"  ? "bg-yellow-200"
++             : status==="PLATING"  ? "bg-purple-200"
++             : status==="READY"    ? "bg-green-200"
++             : "bg-gray-100";
+*** End Patch
+PATCH
+#
+pnpm dlx tsc --noEmit
+git add -A
+git commit -m "feat(bay): live colour based on aggregate status"
+git push
+Prompt 2 — true Closed tab
+php
+Copy
+Edit
+# ───── CLOSED STATUS ─────
+# Files: shared/schema.ts, shared/types.ts, server/storage.ts, server/routes.ts,
+#        client components (ServerView, ActiveOrdersTable, BayTabs)
+#
+# 1.  shared/schema.ts enum
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: shared/schema.ts
+- export const OrderStatus = z.enum(["NEW","COOKING","PLATING","READY","SERVED","CANCELLED"]);
++ export const OrderStatus = z.enum(["NEW","COOKING","PLATING","READY","SERVED","CLOSED","CANCELLED"]);
+*** End Patch
+PATCH
+#
+# 2. storage.ts replace status="SERVED" with status="CLOSED" in markOrderClosed
+apply_patch <<'PATCH'
+*** Begin Patch
+*** Update File: server/storage.ts
+-    .set({ status: "SERVED", servedAt: new Date() })
++    .set({ status: "CLOSED", closedAt: new Date() })
+*** End Patch
+PATCH
+#
+# 3. routes.ts /order/:id/close endpoint stays but sets CLOSED; broadcast 'ordersUpdate'
+#
+# 4. client:
+#    • ServerView Closed tab uses useOrders("closed")
+#    • ActiveOrdersTable: when $ clicked => /close, invalidate ['orders','closed'],['orders','all']
+#    • BayTabs closed badge = status==="CLOSED"
+#
+pnpm dlx tsc --noEmit
+git add -A
+git commit -m "fix(server): real CLOSED status and Closed tab counts"
+git push
