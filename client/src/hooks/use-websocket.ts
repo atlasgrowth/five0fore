@@ -72,11 +72,19 @@ export const useWebSocket = (bayId?: number): WebSocketHook => {
               
             // Handle bay status updates to ensure live color updates
             case 'bay_updated':
-              console.log('Bay updated:', data.data.bay);
-              queryClient.setQueryData(['/api/bays'], (old: any[] | undefined) => {
-                if (!old) return old;
-                return old.map(b => b.id === data.data.bay.id ? data.data.bay : b);
-              });
+              console.log('Bay updated WebSocket message received:', data.data);
+              // Make sure we're getting the bay data in the right format
+              if (data.data && data.data.bay) {
+                queryClient.setQueryData(['/api/bays'], (old: any[] | undefined) => {
+                  if (!old) return old;
+                  console.log('Updating bay in cache:', data.data.bay.id, 'with status:', data.data.bay.status);
+                  return old.map(b => b.id === data.data.bay.id ? data.data.bay : b);
+                });
+                // Also invalidate orders queries to ensure they refresh
+                queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+              } else {
+                console.error('Malformed bay_updated message:', data);
+              }
               break;
           }
         } catch (error) {

@@ -9,6 +9,8 @@ import { SeatingType } from "@shared/schema";
 
 // Bay color helper function to ensure consistent coloring based on status
 export function bayColour(status: string) {
+  if (!status) return "bg-gray-100"; // Default for null/undefined
+  
   const normalizedStatus = status.toUpperCase();
   
   switch (normalizedStatus) {
@@ -26,7 +28,10 @@ export function bayColour(status: string) {
     case "CLOSED":
       return "bg-gray-300";
     case "EMPTY":
+    case "AVAILABLE":
+      return "bg-gray-100";
     default:
+      console.log(`Unknown bay status: ${status}, using default color`);
       return "bg-gray-100";
   }
 }
@@ -171,8 +176,9 @@ export default function BaySelection({ onBayClick }: BaySelectionProps) {
       typeStyle = 'border-purple-300';
     }
 
-    // Use the base color from our bayColour function for more consistent coloring
-    const finalStatusStyle = baseColorClass || statusStyle;
+    // ALWAYS use the bayColour function for consistent coloring
+    // DO NOT fall back to statusStyle as this creates inconsistency
+    const finalStatusStyle = baseColorClass;
     
     return (
       <div 
