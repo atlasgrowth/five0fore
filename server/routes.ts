@@ -820,7 +820,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orderItemId = req.params.id;
       
       // Fire the order item (sets status to COOKING)
-      const updatedItem = await storage.markFired(orderItemId);
+      const updatedItem = await storage.fireOrderItem(orderItemId);
       
       if (!updatedItem) {
         return res.status(404).json({ message: 'Order item not found' });

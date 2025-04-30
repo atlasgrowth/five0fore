@@ -1,0 +1,54 @@
+client:536 WebSocket connection to 'wss://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.dev/?token=ybgV2SLwEaIu' failed: 
+setupWebSocket @ client:536Understand this error
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=ybgV2SLwEaIu' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)Understand this error
+chunk-RPCDYKBN.js?v=d7d943bd:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+use-websocket.ts:30 Connecting to WebSocket at: wss://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.dev/ws
+use-websocket.ts:35 WebSocket connection established
+KitchenOrderGrid.tsx:453 Fetching order details for order 9cf78a4a-6433-4401-8f67-1758c4243b83
+api/order-items/41dc52f5-cf43-4852-8d12-61daa3f640b8/fire:1 
+            
+            
+           Failed to load resource: the server responded with a status of 500 (Internal Server Error)Understand this error
+KitchenOrderGrid.tsx:254 Error updating item status: Error: 500: {"message":"Failed to fire order item"}
+    at throwIfResNotOk (queryClient.ts:6:11)
+    at async apiRequest (queryClient.ts:22:3)
+    at async toggleItemCompletion (KitchenOrderGrid.tsx:243:7)
+toggleItemCompletion @ KitchenOrderGrid.tsx:254Understand this error
+api/order-items/41dc52f5-cf43-4852-8d12-61daa3f640b8/fire:1 
+            
+            
+           Failed to load resource: the server responded with a status of 500 (Internal Server Error)Understand this error
+KitchenOrderGrid.tsx:254 Error updating item status: Error: 500: {"message":"Failed to fire order item"}
+    at throwIfResNotOk (queryClient.ts:6:11)
+    at async apiRequest (queryClient.ts:22:3)
+    at async toggleItemCompletion (KitchenOrderGrid.tsx:243:7)
+toggleItemCompletion @ KitchenOrderGrid.tsx:254Understand this error
+api/order-items/34f6ac9f-5932-4aed-a229-a389a766a28c/fire:1 
+            
+            
+           Failed to load resource: the server responded with a status of 500 (Internal Server Error)Understand this error
+KitchenOrderGrid.tsx:254 Error updating item status: Error: 500: {"message":"Failed to fire order item"}
+    at throwIfResNotOk (queryClient.ts:6:11)
+    at async apiRequest (queryClient.ts:22:3)
+    at async toggleItemCompletion (KitchenOrderGrid.tsx:243:7)
+toggleItemCompletion @ KitchenOrderGrid.tsx:254Understand this error
+api/order-items/41dc52f5-cf43-4852-8d12-61daa3f640b8/fire:1 
+            
+            
+           Failed to load resource: the server responded with a status of 500 (Internal Server Error)Understand this error
+KitchenOrderGrid.tsx:254 Error updating item status: Error: 500: {"message":"Failed to fire order item"}
+    at throwIfResNotOk (queryClient.ts:6:11)
+    at async apiRequest (queryClient.ts:22:3)
+    at async toggleItemCompletion (KitchenOrderGrid.tsx:243:7)
+toggleItemCompletion @ KitchenOrderGrid.tsx:254Understand this error
+api/order-items/41dc52f5-cf43-4852-8d12-61daa3f640b8/fire:1 
+            
+            
+           Failed to load resource: the server responded with a status of 500 (Internal Server Error)Understand this error
+KitchenOrderGrid.tsx:254 Error updating item status: Error: 500: {"message":"Failed to fire order item"}
+    at throwIfResNotOk (queryClient.ts:6:11)
+    at async apiRequest (queryClient.ts:22:3)
+    at async toggleItemCompletion (KitchenOrderGrid.tsx:243:7)
