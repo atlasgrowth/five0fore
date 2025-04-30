@@ -833,8 +833,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: 'Associated order not found' });
       }
       
-      // Dynamically update estimated completion time whenever an item is fired
-      const updatedOrder = await updateOrderEstimatedCompletionTime(updatedItem.orderId);
+      // Skip dynamic time recalculation to improve performance
+      // We'll handle time updates through a dedicated endpoint instead
+      const updatedOrder = null;
       
       // Get bay info
       const bay = await storage.getBayById(order.bayId);
@@ -893,8 +894,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: 'Associated order not found' });
       }
       
-      // Dynamically update estimated completion time when an item transitions to plating
-      const updatedOrder = await updateOrderEstimatedCompletionTime(updatedItem.orderId);
+      // Skip dynamic time recalculation to improve performance
+      // We'll handle time updates through a dedicated endpoint instead
+      const updatedOrder = null;
       
       // Create properly typed item plating message with all needed context
       const itemPlatingMessage: ItemPlatingMessage = {
@@ -954,8 +956,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: 'Associated order not found' });
       }
       
-      // Dynamically update estimated completion time when an item is marked ready
-      const updatedOrder = await updateOrderEstimatedCompletionTime(updatedItem.orderId);
+      // Skip dynamic time recalculation to improve performance
+      // We'll handle time updates through a dedicated endpoint instead
+      const updatedOrder = null;
       
       // Get bay info
       const bay = await storage.getBayById(order.bayId);
@@ -1020,8 +1023,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: 'Associated order not found' });
       }
       
-      // Dynamically update estimated completion time when an item is marked delivered
-      const updatedOrder = await updateOrderEstimatedCompletionTime(updatedItem.orderId);
+      // Skip dynamic time recalculation to improve performance
+      // We'll handle time updates through a dedicated endpoint instead
+      const updatedOrder = null;
       
       // Get bay info
       const bay = await storage.getBayById(order.bayId);
