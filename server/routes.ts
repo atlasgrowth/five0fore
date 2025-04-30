@@ -866,34 +866,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // New endpoint - Mark an order item as plating (transition from COOKING to PLATING)
+  // Optimized endpoint - Mark an order item as plating (transition from COOKING to PLATING)
   app.post('/api/order-items/:id/plating', async (req: Request, res: Response) => {
     try {
       const orderItemId = req.params.id;
+      const startTime = Date.now();
       
-      // Mark the order item as plating
-      const updatedItem = await storage.markPlating(orderItemId);
+      // Combined operation: update item status and get complete data in one database transaction
+      const { updatedItem, order, bay, updatedOrderStatus } = await storage.markItemPlatingWithContext(orderItemId);
       
       if (!updatedItem) {
         return res.status(404).json({ message: 'Order item not found' });
       }
       
-      // Get the order to send bay info
-      const order = await storage.getOrderById(updatedItem.orderId);
-      
       if (!order) {
         return res.status(500).json({ message: 'Associated order not found' });
       }
       
-      // Get bay info
-      const bay = await storage.getBayById(order.bayId);
-      
-      // Create properly typed item plating message
+      // Create properly typed item plating message with all needed context
       const itemPlatingMessage: ItemPlatingMessage = {
         type: 'item_plating',
         data: {
           orderId: updatedItem.orderId,
           orderItem: toOrderItemDTO(updatedItem),
+          orderStatus: updatedOrderStatus || order.status,
           station: updatedItem.station || '',
           platingAt: updatedItem.platingAt ? updatedItem.platingAt.toISOString() : new Date().toISOString(),
           bayId: order.bayId,
@@ -907,6 +903,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Send update to the specific bay
       sendBayUpdate(order.bayId, 'item_plating', itemPlatingMessage.data);
+      
+      const endTime = Date.now();
+      console.log(`Plating operation completed in ${endTime - startTime}ms`);
       
       // Return the updated item
       res.json(toOrderItemDTO(updatedItem));
