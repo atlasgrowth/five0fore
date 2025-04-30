@@ -436,12 +436,22 @@ function OrderCard({
             </div>
           ) : orderDetails?.items && orderDetails.items.length > 0 ? (
             [...orderDetails.items]
-              // Sort first by status, then by cookSeconds (longest first)
+              // Sort by prep/cook time (longest first), then by status
               .sort((a, b) => {
                 // Helper function to get cook seconds
                 const getCookSeconds = (item: any) => item.cookSeconds || item.menuItem?.prep_seconds || 0;
                 
-                // First group by status
+                // Get cook times for both items
+                const aCookTime = getCookSeconds(a);
+                const bCookTime = getCookSeconds(b);
+                
+                // First, always put the longest cook time items at the top, regardless of status
+                // This is the most important sorting rule
+                if (aCookTime !== bCookTime) {
+                  return bCookTime - aCookTime; // Descending order (longest first)
+                }
+                
+                // If cook times are the same, then sort by status
                 const statusPriority: Record<string, number> = { 
                   [OrderItemStatus.NEW]: 0, 
                   [OrderItemStatus.COOKING]: 1, 
@@ -452,17 +462,7 @@ function OrderCard({
                 const aStatus = a.status || "PENDING";
                 const bStatus = b.status || "PENDING";
                 
-                // If status is different, sort by status
-                if (aStatus !== bStatus) {
-                  return (statusPriority[aStatus] || 0) - (statusPriority[bStatus] || 0);
-                }
-                
-                // If both are pending (NEW or null status), sort by cook time (longest first)
-                if (!a.status && !b.status) {
-                  return getCookSeconds(b) - getCookSeconds(a);
-                }
-                
-                return 0;
+                return (statusPriority[aStatus] || 0) - (statusPriority[bStatus] || 0);
               })
               .map((item) => (
                 <div 
@@ -491,7 +491,12 @@ function OrderCard({
                     />
                     <div className="flex flex-col">
                       <div className="flex items-center">
-                        <span className="text-sm font-medium">{item.quantity}x {item.menuItem?.name}</span>
+                        <div className="flex items-center">
+                          <span className="text-sm font-medium">{item.quantity}x {item.menuItem?.name}</span>
+                          <span className="ml-1 text-xs text-gray-500">
+                            ({Math.round((item.cookSeconds || item.menuItem?.prep_seconds || 0) / 60)}m)
+                          </span>
+                        </div>
                         
                         {/* Status labels with appropriate indicators and action buttons */}
                         {item.status === OrderItemStatus.COOKING && item.firedAt && (
