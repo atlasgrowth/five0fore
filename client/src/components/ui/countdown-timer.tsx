@@ -1,110 +1,82 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
 interface CountdownTimerProps {
-  estimatedCompletionTime: string | Date | null;
+  estimatedCompletionTime: Date | string | null;
   className?: string;
 }
 
-/**
- * Component that displays a countdown timer until estimated completion time
- * Shows time remaining or time overdue with appropriate styling
- */
 export function CountdownTimer({ estimatedCompletionTime, className }: CountdownTimerProps) {
-  const [timeRemaining, setTimeRemaining] = useState<{ minutes: number; seconds: number } | null>(null);
+  const [remaining, setRemaining] = useState<{ minutes: number, seconds: number } | null>(null);
   const [isOverdue, setIsOverdue] = useState(false);
   
   useEffect(() => {
-    if (!estimatedCompletionTime) {
-      setTimeRemaining(null);
-      return;
-    }
+    if (!estimatedCompletionTime) return;
     
-    // Function to calculate time remaining
-    const calculateTimeRemaining = () => {
+    // Function to calculate remaining time
+    const calculateRemaining = () => {
       const targetTime = new Date(estimatedCompletionTime).getTime();
       const now = Date.now();
       const diffMs = targetTime - now;
       
-      // Check if overdue
       if (diffMs <= 0) {
-        // Calculate overdue time (positive values)
-        const overdueMs = Math.abs(diffMs);
-        const minutes = Math.floor(overdueMs / (1000 * 60));
-        const seconds = Math.floor((overdueMs % (1000 * 60)) / 1000);
         setIsOverdue(true);
+        // Show the absolute value of overdue time
+        const absDiffMs = Math.abs(diffMs);
+        const minutes = Math.floor(absDiffMs / (1000 * 60));
+        const seconds = Math.floor((absDiffMs % (1000 * 60)) / 1000);
         return { minutes, seconds };
       } else {
-        // Calculate remaining time
+        setIsOverdue(false);
         const minutes = Math.floor(diffMs / (1000 * 60));
         const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
-        setIsOverdue(false);
         return { minutes, seconds };
       }
     };
     
     // Calculate initial time
-    setTimeRemaining(calculateTimeRemaining());
+    setRemaining(calculateRemaining());
     
     // Update time every second
     const interval = setInterval(() => {
-      setTimeRemaining(calculateTimeRemaining());
+      setRemaining(calculateRemaining());
     }, 1000);
     
     // Clean up on unmount
     return () => clearInterval(interval);
   }, [estimatedCompletionTime]); // Re-run effect if estimatedCompletionTime changes
   
-  // If no completion time or calculation result, show placeholder
-  if (!estimatedCompletionTime || !timeRemaining) {
-    return <span className={cn("text-xs font-medium text-gray-400", className)}>--:--</span>;
+  if (!remaining) {
+    return null;
   }
   
-  // Determine styling based on time remaining
-  let textColorClass = "text-green-600";
-  let bgColorClass = "bg-green-100";
-  let prefix = "";
+  // Determine styling based on remaining time
+  let bgColor = 'bg-green-500'; // Default - plenty of time left
   
+  // Change colors based on time remaining
   if (isOverdue) {
-    prefix = "Overdue: ";
-    if (timeRemaining.minutes > 5) {
-      // Significantly overdue
-      textColorClass = "text-red-600";
-      bgColorClass = "bg-red-100";
-    } else if (timeRemaining.minutes > 2) {
-      // Moderately overdue
-      textColorClass = "text-orange-600";
-      bgColorClass = "bg-orange-100";
-    } else {
-      // Slightly overdue
-      textColorClass = "text-amber-600";
-      bgColorClass = "bg-amber-100";
-    }
-  } else {
-    // Not overdue - check how much time remains
-    if (timeRemaining.minutes < 2) {
-      // Getting close to deadline
-      textColorClass = "text-amber-600";
-      bgColorClass = "bg-amber-100";
-    } else if (timeRemaining.minutes < 5) {
-      // Moderate time remaining
-      textColorClass = "text-green-600";
-      bgColorClass = "bg-green-100";
-    } else {
-      // Plenty of time remaining
-      textColorClass = "text-blue-600";
-      bgColorClass = "bg-blue-100";
-    }
+    bgColor = 'bg-red-500'; // Overdue
+  } else if (remaining.minutes < 2) {
+    bgColor = 'bg-amber-500'; // Less than 2 minutes - getting close
+  } else if (remaining.minutes < 5) {
+    bgColor = 'bg-yellow-500'; // Less than 5 minutes - heads up
   }
   
   return (
-    <span className={cn(
-      "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
-      bgColorClass,
-      textColorClass,
+    <div className={cn(
+      "flex flex-col text-xs",
       className
     )}>
-      {prefix}{timeRemaining.minutes}:{timeRemaining.seconds.toString().padStart(2, '0')}
-    </span>
+      <div className="text-gray-500 mb-1">
+        {isOverdue ? 'Overdue by:' : 'Ready in:'}
+      </div>
+      <span className={cn(
+        "font-medium px-3 py-1.5 rounded-full shadow-sm flex items-center justify-center",
+        bgColor,
+        "text-white"
+      )}>
+        {`${remaining.minutes}:${remaining.seconds.toString().padStart(2, '0')}`}
+      </span>
+    </div>
   );
 }

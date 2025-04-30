@@ -183,33 +183,25 @@ export async function updateOrderEstimatedCompletionTime(orderId: string) {
       }
     });
     
-    // Always use current time as the base for calculation, not the original creation time
-    // This ensures that for orders already in progress, we're projecting from now
+    // Always use current time as the base for calculation - simpler approach
     let estimatedCompletionTime = new Date();
     
     if (progressFactor < 1.0) {
-      // Apply damping to load factor (50% damping by default)
-      // Formula: Load factor × (1 - progress)
-      const adjustedLoadFactor = loadFactor * (1 - (progressFactor * 0.5));
+      // Apply a simple load factor to the cooking time
+      const adjustedCookTime = applyLoadFactor(longestRemainingCookTime, loadFactor);
       
-      // Calculate prep buffer + remaining longest cook time + expo buffer
-      const remainingPrepBuffer = progressFactor < 0.3 ? 
-        applyLoadFactor(PREP_BUFFER_SECONDS * (1 - progressFactor/0.3), adjustedLoadFactor) : 0;
+      // Always add the expo buffer for delivery/plating time
+      const expoBuffer = applyLoadFactor(EXPO_BUFFER_SECONDS, loadFactor);
       
-      const adjustedCookTime = applyLoadFactor(longestRemainingCookTime, adjustedLoadFactor);
-      
-      const remainingExpoBuffer = progressFactor < 0.8 ?
-        applyLoadFactor(EXPO_BUFFER_SECONDS * (1 - (progressFactor - 0.3)/0.5), adjustedLoadFactor) : 0;
-      
-      // Total remaining seconds
-      const totalRemainingSeconds = remainingPrepBuffer + adjustedCookTime + remainingExpoBuffer;
+      // Total remaining seconds is simply: remaining cook time + expo buffer
+      const totalRemainingSeconds = adjustedCookTime + expoBuffer;
       
       // Add the calculated remaining time to the current time
       estimatedCompletionTime.setSeconds(estimatedCompletionTime.getSeconds() + totalRemainingSeconds);
       
       console.log(`Order ${orderId} - Estimated completion in ${totalRemainingSeconds} seconds`);
-      console.log(`Progress: ${progressFactor * 100}%, Load factor: ${loadFactor}, Adjusted load: ${adjustedLoadFactor}`);
-      console.log(`Remaining prep: ${remainingPrepBuffer}s, Cook time: ${adjustedCookTime}s, Expo: ${remainingExpoBuffer}s`);
+      console.log(`Progress: ${progressFactor * 100}%, Items cooked: ${completedItems}/${totalItems}`);
+      console.log(`Load factor: ${loadFactor}, Cook time: ${adjustedCookTime}s, Expo: ${expoBuffer}s`);
     }
     
     // Update the order in the database
