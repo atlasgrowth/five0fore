@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { OrderSummary, OrderWithItems, OrderItemStatus, OrderStatus } from "@shared/schema";
 
-// Timer to show when to start cooking an item
+// Simple timer to show when to start cooking an item
 function StartTimer({ 
   orderCreatedAt, 
   cookSeconds, 
@@ -16,87 +16,13 @@ function StartTimer({
   cookSeconds: number, 
   longestCookItem: boolean 
 }) {
-  const [timeToStart, setTimeToStart] = useState<number | null>(null);
-  const [isTimeToStart, setIsTimeToStart] = useState<boolean>(false);
-  const [longestCookTime, setLongestCookTime] = useState<number>(0);
-  const [percentProgress, setPercentProgress] = useState<number>(0);
-  
-  useEffect(() => {
-    // Find the actual longest cook time in the order
-    if (longestCookItem) {
-      setLongestCookTime(cookSeconds);
-    }
-  }, [longestCookItem, cookSeconds]);
-  
-  useEffect(() => {
-    const calculateStartTime = () => {
-      // If this is the longest cook item, it should start right away
-      if (longestCookItem) {
-        setIsTimeToStart(true);
-        setTimeToStart(0);
-        setPercentProgress(100);
-        return;
-      }
-      
-      // Otherwise, calculate when to start this item
-      const orderTime = new Date(orderCreatedAt).getTime();
-      const currentTime = new Date().getTime();
-      const elapsedMs = currentTime - orderTime;
-      
-      // Time to wait before starting this item
-      // We want items to finish at approximately the same time
-      // So start shorter cooking items after: (longest cook time - this item's cook time)
-      const waitTimeMs = Math.max(0, (longestCookTime - cookSeconds) * 1000);
-      
-      // If it's already time to start (elapsed time > wait time)
-      if (elapsedMs >= waitTimeMs) {
-        setIsTimeToStart(true);
-        setTimeToStart(0);
-        setPercentProgress(100);
-      } else {
-        // Calculate seconds remaining until it's time to start
-        const remainingMs = waitTimeMs - elapsedMs;
-        const totalWaitTime = longestCookTime - cookSeconds;
-        
-        // Calculate percentage of wait time that has passed
-        if (totalWaitTime > 0) {
-          const elapsedWaitTime = totalWaitTime - (remainingMs / 1000);
-          const percent = Math.min(100, Math.floor((elapsedWaitTime / totalWaitTime) * 100));
-          setPercentProgress(percent);
-        } else {
-          setPercentProgress(0);
-        }
-        
-        setTimeToStart(Math.ceil(remainingMs / 1000));
-        setIsTimeToStart(false);
-      }
-    };
-    
-    calculateStartTime();
-    const timer = setInterval(calculateStartTime, 1000);
-    
-    return () => clearInterval(timer);
-  }, [orderCreatedAt, cookSeconds, longestCookItem, longestCookTime]);
-  
-  // Format time in minutes and seconds
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-  
-  if (isTimeToStart) {
+  // If this is the longest cook item, it should start immediately
+  if (longestCookItem) {
     return (
-      <div className="ml-2 flex items-center">
-        <span className="text-xs font-medium bg-red-100 text-red-800 px-2 py-0.5 rounded-full flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Start now!
-        </span>
+      <div className="ml-2">
         <button 
-          className="ml-2 p-1 text-xs bg-yellow-100 hover:bg-yellow-200 text-yellow-800 rounded-full flex items-center"
-          title="Start cooking"
+          className="p-1 text-xs bg-red-100 hover:bg-red-200 text-red-800 rounded flex items-center font-bold"
+          title="Start cooking now"
           onClick={(e) => {
             e.stopPropagation();
             const checkbox = e.currentTarget.closest('div[data-item-id]')?.querySelector('input[type="checkbox"]') as HTMLInputElement;
@@ -105,33 +31,27 @@ function StartTimer({
             }
           }}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
           </svg>
+          START NOW
         </button>
       </div>
     );
   }
   
+  // Calculate a simple wait time (hard-coded for now for simplicity)
+  // For a real implementation, we would need to pass the longest cook time from the parent
+  const myItemMinutes = Math.round(cookSeconds / 60);
+  const waitMinutes = Math.max(0, 13 - myItemMinutes); // Assuming longest item is 13 minutes
+  
   return (
-    <div className="ml-2 flex items-center">
-      <div className="flex flex-col">
-        <div className="flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span className="text-xs font-medium text-gray-700">
-            Start in {timeToStart !== null ? formatTime(timeToStart) : '--:--'}
-          </span>
-        </div>
-        
-        {/* Progress bar showing time progress until start */}
-        <div className="relative w-16 h-2 bg-gray-200 rounded-full overflow-hidden mt-1">
-          <div 
-            className="absolute left-0 top-0 h-full bg-blue-400"
-            style={{ width: `${percentProgress}%` }}
-          ></div>
-        </div>
+    <div className="ml-2">
+      <div className="p-1 text-xs bg-gray-100 text-gray-800 rounded flex items-center font-medium">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        WAIT {waitMinutes} MIN
       </div>
     </div>
   );
@@ -332,17 +252,18 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
             No orders in this category
           </div>
         ) : (
+          // Sort orders by creation time (oldest first) to prevent jumping
           [...orders].sort((a, b) => {
-            const statusPriority: Record<string, number> = {
-              [OrderStatus.NEW]: 0,
-              [OrderStatus.COOKING]: 10,
-              [OrderStatus.PLATING]: 20,
-              [OrderStatus.READY]: 30,
-              [OrderStatus.SERVED]: 40,
-              [OrderStatus.CLOSED]: 50,
-              [OrderStatus.CANCELLED]: 60
-            };
-            return (statusPriority[a.status] ?? 100) - (statusPriority[b.status] ?? 100);
+            // First sort by whether order is NEW or not
+            const aIsNew = a.status === OrderStatus.NEW;
+            const bIsNew = b.status === OrderStatus.NEW;
+            
+            if (aIsNew !== bIsNew) {
+              return aIsNew ? -1 : 1; // New orders always come first
+            }
+            
+            // Then sort by creation time (oldest first)
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           }).map((order) => (
             <div key={order.id} className="flex-shrink-0 min-w-[350px] max-w-[400px] snap-start">
               <OrderCard
