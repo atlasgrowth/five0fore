@@ -574,7 +574,13 @@ function OrderCard({
                   const diffMs = estimatedTime.getTime() - currentTime.getTime();
                   const diffMinutes = Math.round(diffMs / 60000);
                   
-                  // Choose color based on time difference
+                  // Choose color based on order status first
+                  if (order.status === OrderStatus.READY) return "bg-green-100 text-green-800";
+                  if (order.status === OrderStatus.SERVED) return "bg-blue-100 text-blue-800";
+                  if (order.status === OrderStatus.CLOSED) return "bg-gray-100 text-gray-800";
+                  if (order.status === OrderStatus.CANCELLED) return "bg-red-100 text-red-800";
+                  
+                  // For active orders, choose color based on time difference
                   if (diffMinutes < -5) return "bg-red-100 text-red-800"; // More than 5 min late
                   if (diffMinutes < 0) return "bg-amber-100 text-amber-800"; // Up to 5 min late
                   if (diffMinutes <= 5) return "bg-green-100 text-green-800"; // On time (within 5 min)
@@ -588,7 +594,23 @@ function OrderCard({
                   const diffMs = estimatedTime.getTime() - currentTime.getTime();
                   const diffMinutes = Math.round(diffMs / 60000);
                   
-                  // Format the message
+                  // Get original expected time
+                  const creationTime = new Date(order.createdAt);
+                  const originalEstimatedMs = estimatedTime.getTime() - creationTime.getTime();
+                  const originalMinutes = Math.round(originalEstimatedMs / 60000);
+                  
+                  // If order is READY, SERVED, CLOSED, etc. show final status instead of time diff
+                  if (order.status === OrderStatus.READY) {
+                    return "Ready";
+                  } else if (order.status === OrderStatus.SERVED) {
+                    return "Served";
+                  } else if (order.status === OrderStatus.CLOSED) {
+                    return "Closed";
+                  } else if (order.status === OrderStatus.CANCELLED) {
+                    return "Cancelled";
+                  }
+                  
+                  // For active orders, show time difference
                   if (diffMinutes < 0) {
                     return `${Math.abs(diffMinutes)}m behind`;
                   } else if (diffMinutes === 0) {

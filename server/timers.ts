@@ -142,6 +142,16 @@ export async function updateOrderEstimatedCompletionTime(orderId: string) {
     // Extract the order and items from the result
     const items = orderWithItems.items;
     const order = orderWithItems;
+
+    // For orders already in READY, SERVED, CLOSED or CANCELLED status,
+    // we don't need to recalculate times - they're already done
+    if (order.status === OrderStatus.READY || 
+        order.status === OrderStatus.SERVED || 
+        order.status === OrderStatus.CLOSED ||
+        order.status === OrderStatus.CANCELLED) {
+      console.log(`Order ${orderId} is in ${order.status} status - skipping time recalculation`);
+      return order;
+    }
     
     // Calculate current kitchen load based on number of active orders
     // This is a simple approach - in a real system, you might have a more complex calculation
@@ -183,10 +193,14 @@ export async function updateOrderEstimatedCompletionTime(orderId: string) {
       }
     });
     
-    // Always use current time as the base for calculation - simpler approach
-    let estimatedCompletionTime = new Date();
+    // Calculate the estimated completion time using both original creation time and current status
+    let estimatedCompletionTime;
     
-    if (progressFactor < 1.0) {
+    // If this is a cooking order with items in progress, use dynamic calculation
+    if (progressFactor > 0 && progressFactor < 1.0) {
+      // Use current time as base for active orders
+      estimatedCompletionTime = new Date();
+      
       // Apply a simple load factor to the cooking time
       const adjustedCookTime = applyLoadFactor(longestRemainingCookTime, loadFactor);
       
@@ -202,6 +216,38 @@ export async function updateOrderEstimatedCompletionTime(orderId: string) {
       console.log(`Order ${orderId} - Estimated completion in ${totalRemainingSeconds} seconds`);
       console.log(`Progress: ${progressFactor * 100}%, Items cooked: ${completedItems}/${totalItems}`);
       console.log(`Load factor: ${loadFactor}, Cook time: ${adjustedCookTime}s, Expo: ${expoBuffer}s`);
+    } 
+    // For orders that haven't started cooking yet, base on original creation time
+    else if (progressFactor === 0) {
+      // Find the longest cook time among all items
+      let longestCookTime = 0;
+      items.forEach(item => {
+        const cookTime = item.cookSeconds || item.menuItem?.prep_seconds || DEFAULT_COOK_SECONDS;
+        if (cookTime > longestCookTime) {
+          longestCookTime = cookTime;
+        }
+      });
+      
+      // Use original creation date plus full expected time
+      estimatedCompletionTime = calculateOrderReadyTime(
+        new Date(order.createdAt), 
+        longestCookTime,
+        loadFactor
+      );
+      
+      console.log(`Order ${orderId} (not started) - Using original estimate: ${estimatedCompletionTime}`);
+    }
+    // For orders that are complete (all items ready), don't change the time
+    else if (progressFactor === 1.0) {
+      if (order.estimatedCompletionTime) {
+        // Keep existing time
+        estimatedCompletionTime = new Date(order.estimatedCompletionTime);
+        console.log(`Order ${orderId} complete - Keeping existing time: ${estimatedCompletionTime}`);
+      } else {
+        // If somehow missing, use current time
+        estimatedCompletionTime = new Date();
+        console.log(`Order ${orderId} complete but missing time - Setting to now: ${estimatedCompletionTime}`);
+      }
     }
     
     // Update the order in the database
