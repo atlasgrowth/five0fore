@@ -3,6 +3,9 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
+// AttentionLevel enum is defined below in the file
+// This enum is used for order prioritization
+
 // Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),

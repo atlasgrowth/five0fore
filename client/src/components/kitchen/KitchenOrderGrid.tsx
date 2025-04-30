@@ -522,7 +522,18 @@ function OrderCard({
               )}>
                 {order.status}
               </span>
-              {/* Removed DELAYED badge as per request */}
+              
+              {/* Add attention level badge when an order needs attention */}
+              {order.attentionLevel && order.attentionLevel !== AttentionLevel.NORMAL && (
+                <div className="ml-2">
+                  <AttentionLevelBadge 
+                    level={order.attentionLevel}
+                    showIcon={true}
+                    showLabel={false}
+                    compact={true}
+                  />
+                </div>
+              )}
             </div>
             <div className="flex items-center mb-1">
               <span className="text-sm font-medium text-neutral-600 bg-neutral-100 px-2 py-0.5 rounded-md mr-2">
