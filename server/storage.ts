@@ -202,11 +202,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateBayStatus(id: number, status: string): Promise<Bay | undefined> {
+    // Import WebSocket functionality dynamically to avoid circular imports
+    const { broadcastUpdate } = await import('./ws');
+    
+    // Update the bay status in the database
     const [updatedBay] = await db
       .update(bays)
       .set({ status })
       .where(eq(bays.id, id))
       .returning();
+    
+    if (updatedBay) {
+      // Broadcast the bay update with its new status to all clients
+      broadcastUpdate('bay_updated', { bay: toBayDTO(updatedBay) });
+      console.log(`Broadcasted bay status update: Bay ${id} -> ${status}`);
+    }
+    
     return updatedBay || undefined;
   }
 
