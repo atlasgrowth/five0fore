@@ -497,85 +497,99 @@ function OrderCard({
       )}
     >
       <div className="p-4">
-        {/* TOP ROW: Status on left, Bay number in middle, Order number on right */}
-        <div className="flex justify-between items-center mb-3 border-b pb-2">
-          {/* Left: Status */}
+        <div className="flex justify-between items-start mb-3">
           <div>
-            <span className={cn(
-              "text-sm font-medium uppercase tracking-wider px-2 py-1 rounded",
-              order.status === OrderStatus.READY ? "text-green-700 bg-green-50 border border-green-200" : 
-              order.status === OrderStatus.PLATING ? "text-purple-700 bg-purple-50 border border-purple-200" :
-              order.status === OrderStatus.COOKING ? "text-yellow-700 bg-yellow-50 border border-yellow-200" :
-              order.status === OrderStatus.SERVED ? "text-blue-700 bg-blue-50 border border-blue-200" :
-              order.status === OrderStatus.CLOSED ? "text-gray-700 bg-gray-100 border border-gray-200" :
-              order.status === OrderStatus.CANCELLED ? "text-red-700 bg-red-50 border border-red-200" :
-              "text-blue-700 bg-blue-50 border border-blue-200"
-            )}>
-              {order.status}
-            </span>
-          </div>
-          
-          {/* Middle: Bay information */}
-          <div className="text-center">
-            <h3 className="font-bold text-lg">Bay {order.bayNumber}</h3>
-          </div>
-          
-          {/* Right: Order number */}
-          <div className="text-right">
-            <span className="text-sm font-medium text-neutral-600 bg-neutral-100 px-2 py-1 rounded-md">
-              #{order.orderNumber}
-            </span>
-          </div>
-        </div>
-        
-        {/* CONTENT AREA */}
-        <div className="mb-3">
-          {/* Order items will go here */}
-                {(() => {
-                  // Calculate time difference in minutes
-                  const currentTime = new Date();
-                  const estimatedTime = new Date(order.estimatedCompletionTime);
-                  const diffMs = estimatedTime.getTime() - currentTime.getTime();
-                  const diffMinutes = Math.round(diffMs / 60000);
-                  
-                  // Show status for completed orders
-                  if (order.status === OrderStatus.READY) {
-                    return "Ready";
-                  } else if (order.status === OrderStatus.SERVED) {
-                    return "Served";
-                  } else if (order.status === OrderStatus.CLOSED) {
-                    return "Closed";
-                  } else if (order.status === OrderStatus.CANCELLED) {
-                    return "Cancelled";
-                  }
-                  
-                  // For active orders: when an item hasn't started cooking, 
-                  // the recalculated completion time factors in exactly how far behind we are
-                  if (diffMinutes < 0) {
-                    const lateText = Math.abs(diffMinutes) === 1 ? "minute" : "minutes";
-                    return `${Math.abs(diffMinutes)}${lateText.charAt(0)} Late`;
-                  } else {
-                    return "On time";
-                  }
-                })()}
+            <div className="flex items-center mb-1">
+              <div className={cn(
+                "w-2 h-2 rounded-full mr-2",
+                order.status === OrderStatus.READY ? "bg-green-500" : 
+                order.status === OrderStatus.PLATING ? "bg-purple-500" :
+                order.status === OrderStatus.COOKING ? "bg-yellow-500" :
+                order.status === OrderStatus.SERVED ? "bg-blue-500" :
+                order.status === OrderStatus.CLOSED ? "bg-gray-500" :
+                order.status === OrderStatus.CANCELLED ? "bg-red-500" :
+                order.isDelayed ? "bg-red-500" : "bg-blue-500"
+              )}></div>
+              <span className={cn(
+                "text-sm font-medium uppercase tracking-wider px-2 py-0.5 rounded",
+                order.status === OrderStatus.READY ? "text-green-700 bg-green-50 border border-green-200" : 
+                order.status === OrderStatus.PLATING ? "text-purple-700 bg-purple-50 border border-purple-200" :
+                order.status === OrderStatus.COOKING ? "text-yellow-700 bg-yellow-50 border border-yellow-200" :
+                order.status === OrderStatus.SERVED ? "text-blue-700 bg-blue-50 border border-blue-200" :
+                order.status === OrderStatus.CLOSED ? "text-gray-700 bg-gray-100 border border-gray-200" :
+                order.status === OrderStatus.CANCELLED ? "text-red-700 bg-red-50 border border-red-200" :
+                order.isDelayed ? "text-red-700 bg-red-50 border border-red-200" : "text-blue-700 bg-blue-50 border border-blue-200"
+              )}>
+                {order.status}
               </span>
-            )}
+              
+              {/* Add attention level badge when an order needs attention */}
+              {order.attentionLevel && order.attentionLevel !== AttentionLevel.NORMAL && (
+                <div className="ml-2">
+                  <AttentionLevelBadge 
+                    level={order.attentionLevel}
+                    showIcon={true}
+                    showLabel={false}
+                    compact={true}
+                  />
+                </div>
+              )}
+            </div>
+            <div className="flex items-center mb-1">
+              <span className="text-sm font-medium text-neutral-600 bg-neutral-100 px-2 py-0.5 rounded-md mr-2">
+                #{order.orderNumber}
+              </span>
+              <h3 className="font-poppins font-bold text-lg">Bay {order.bayNumber}</h3>
+              <span className="ml-1 text-sm text-neutral-500">(Floor {order.floor})</span>
+            </div>
+            <p className="text-xs text-neutral-500 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Placed&nbsp;
+              {new Date(order.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+            </p>
+          </div>
+          <div className="flex flex-col items-end">
+            {/* Show estimated completion time */}
+            <div className="text-sm font-medium">
+              {order.estimatedCompletionTime ? (
+                <div className="flex flex-col items-end">
+                  <span className="text-xs text-neutral-500">Est. Completion:</span>
+                  <span className="font-medium">{new Date(order.estimatedCompletionTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
+                </div>
+              ) : (
+                <TimerDisplay createdAt={order.createdAt} />
+              )}
+            </div>
+            
+            {/* Simplified status indicator - just on-time/late without detailed text */}
+            <span className={cn(
+              "mt-1 text-xs font-medium px-2 py-0.5 rounded-full",
+              // Is the order actually late compared to its estimated completion time?
+              (order.estimatedCompletionTime && new Date() > new Date(order.estimatedCompletionTime))
+                ? "bg-red-100 text-red-800" 
+                : "bg-green-100 text-green-800"
+            )}>
+              {(order.estimatedCompletionTime && new Date() > new Date(order.estimatedCompletionTime)) 
+                ? "Late" 
+                : "On Time"}
+            </span>
           </div>
         </div>
         
-        {/* Simplified alert for critically late orders */}
+        {/* Alert Acknowledgment Button - only shown for critically late orders */}
         {orderDetails?.items && orderDetails.items.some(item => {
           if (item.status !== OrderItemStatus.COOKING || !item.firedAt || !item.cookSeconds) return false;
           const elapsedSeconds = Math.floor((new Date().getTime() - new Date(item.firedAt).getTime()) / 1000);
           return elapsedSeconds > (item.cookSeconds * 1.2); // 20% over cook time is critical
         }) && acknowledgeAlert && (
-          <div className="flex items-center justify-between mb-3 px-3 py-1.5 bg-slate-700 text-white text-xs rounded">
-            <span>Items need attention</span>
+          <div className="flex justify-center mb-3">
             <button
               onClick={() => acknowledgeAlert(order.id)}
-              className="text-slate-300 hover:text-white"
+              className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors"
             >
-              ×
+              Acknowledge Alert
             </button>
           </div>
         )}
@@ -689,7 +703,7 @@ function OrderCard({
                           // If no cooking items, show "START NOW"
                           if (cookingItems.length === 0) {
                             return (
-                              <div className="absolute -top-2 right-2 bg-red-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm ">
+                              <div className="absolute -top-2 right-2 bg-red-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm animate-pulse">
                                 START NOW
                               </div>
                             );
@@ -727,7 +741,7 @@ function OrderCard({
                           if (startInSeconds <= 0) {
                             // Should start now
                             return (
-                              <div className="absolute -top-2 right-2 bg-red-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm ">
+                              <div className="absolute -top-2 right-2 bg-red-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm animate-pulse">
                                 START NOW
                               </div>
                             );
@@ -769,44 +783,47 @@ function OrderCard({
                     
                     // Format display
                     if (remainingSeconds <= 0) {
-                      // Simplified "Check" button with X to dismiss for all items that need checking
-                      return (
-                        <div className="absolute -top-2 right-2 flex items-center gap-1">
-                          <div className="bg-slate-600 text-white text-xs px-2 py-0.5 rounded shadow-sm">
-                            CHECK
-                          </div>
-                          {!acknowledgedItems[item.id] && (
+                      // Add a "Stop Flashing" button for critically late items
+                      if (isCriticallyLate && !acknowledgedItems[item.id]) {
+                        return (
+                          <div className="absolute -top-2 right-2 flex items-center gap-1">
+                            <div className="bg-green-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm animate-pulse">
+                              READY TO CHECK
+                            </div>
                             <button 
-                              className="text-slate-500 bg-white border border-slate-300 w-4 h-4 flex items-center justify-center rounded-full text-xs hover:bg-slate-100"
+                              className="bg-red-700 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm hover:bg-red-800"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleAcknowledgeItem(item.id);
                               }}
                             >
-                              ×
+                              ✓
                             </button>
-                          )}
-                        </div>
-                      );
+                          </div>
+                        );
+                      } else {
+                        return (
+                          <div className="absolute -top-2 right-2 bg-green-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm animate-pulse">
+                            READY TO CHECK
+                          </div>
+                        );
+                      }
                     } else if (remainingSeconds < 30) {
-                      // Almost done - use amber
                       return (
-                        <div className="absolute -top-2 right-2 bg-amber-500 text-white px-2 py-0.5 text-xs rounded shadow-sm">
-                          {minutes}:{seconds.toString().padStart(2, '0')}
+                        <div className="absolute -top-2 right-2 bg-green-600 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm">
+                          COOKING {minutes}:{seconds.toString().padStart(2, '0')}
                         </div>
                       );
                     } else if (remainingSeconds < 60) {
-                      // Less than a minute - use slate/blue
                       return (
-                        <div className="absolute -top-2 right-2 bg-slate-600 text-white px-2 py-0.5 text-xs rounded shadow-sm">
-                          {minutes}:{seconds.toString().padStart(2, '0')}
+                        <div className="absolute -top-2 right-2 bg-amber-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm">
+                          COOKING {minutes}:{seconds.toString().padStart(2, '0')}
                         </div>
                       );
                     } else {
-                      // Normal cooking - use slate/blue
                       return (
-                        <div className="absolute -top-2 right-2 bg-slate-600 text-white px-2 py-0.5 text-xs rounded shadow-sm">
-                          {minutes}:{seconds.toString().padStart(2, '0')}
+                        <div className="absolute -top-2 right-2 bg-blue-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm">
+                          COOKING {minutes}:{seconds.toString().padStart(2, '0')}
                         </div>
                       );
                     }

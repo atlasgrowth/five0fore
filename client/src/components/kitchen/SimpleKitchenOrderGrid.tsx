@@ -1,5 +1,4 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { TimerPill } from "@/components/ui/timer-badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -320,12 +319,9 @@ function OrderCard({
                         
                         {/* Timer for cooking items */}
                         {item.status === OrderItemStatus.COOKING && item.firedAt && (
-                          <TimerPill 
-                            firedAt={item.firedAt}
-                            cookSeconds={item.cookSeconds || item.menuItem?.prep_seconds || 0}
-                            status={item.status}
-                            compact={true}
-                          />
+                          <span className="ml-2 text-xs font-medium bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">
+                            Cooking
+                          </span>
                         )}
                       </div>
                       

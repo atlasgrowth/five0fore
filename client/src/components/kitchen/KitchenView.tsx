@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { useToast } from "@/hooks/use-toast";
 import OrderPriorityTabs from "./OrderPriorityTabs";
-import KitchenOrderGrid from "./KitchenOrderGrid";
+import SimpleKitchenOrderGrid from "./SimpleKitchenOrderGrid";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OrderSummary } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -154,7 +154,7 @@ export default function KitchenView() {
           ))}
         </div>
       ) : (
-        <KitchenOrderGrid orders={filteredOrders} />
+        <SimpleKitchenOrderGrid orders={filteredOrders} />
       )}
     </div>
   );
