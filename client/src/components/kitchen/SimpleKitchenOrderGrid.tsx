@@ -19,6 +19,7 @@ function StartTimer({
   const [timeToStart, setTimeToStart] = useState<number | null>(null);
   const [isTimeToStart, setIsTimeToStart] = useState<boolean>(false);
   const [longestCookTime, setLongestCookTime] = useState<number>(0);
+  const [percentProgress, setPercentProgress] = useState<number>(0);
   
   useEffect(() => {
     // Find the actual longest cook time in the order
@@ -33,6 +34,7 @@ function StartTimer({
       if (longestCookItem) {
         setIsTimeToStart(true);
         setTimeToStart(0);
+        setPercentProgress(100);
         return;
       }
       
@@ -50,9 +52,21 @@ function StartTimer({
       if (elapsedMs >= waitTimeMs) {
         setIsTimeToStart(true);
         setTimeToStart(0);
+        setPercentProgress(100);
       } else {
         // Calculate seconds remaining until it's time to start
         const remainingMs = waitTimeMs - elapsedMs;
+        const totalWaitTime = longestCookTime - cookSeconds;
+        
+        // Calculate percentage of wait time that has passed
+        if (totalWaitTime > 0) {
+          const elapsedWaitTime = totalWaitTime - (remainingMs / 1000);
+          const percent = Math.min(100, Math.floor((elapsedWaitTime / totalWaitTime) * 100));
+          setPercentProgress(percent);
+        } else {
+          setPercentProgress(0);
+        }
+        
         setTimeToStart(Math.ceil(remainingMs / 1000));
         setIsTimeToStart(false);
       }
@@ -100,12 +114,26 @@ function StartTimer({
   }
   
   return (
-    <span className="ml-2 text-xs font-medium bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full flex items-center">
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-      Start in {timeToStart !== null ? formatTime(timeToStart) : '--:--'}
-    </span>
+    <div className="ml-2 flex items-center">
+      <div className="flex flex-col">
+        <div className="flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-xs font-medium text-gray-700">
+            Start in {timeToStart !== null ? formatTime(timeToStart) : '--:--'}
+          </span>
+        </div>
+        
+        {/* Progress bar showing time progress until start */}
+        <div className="relative w-16 h-2 bg-gray-200 rounded-full overflow-hidden mt-1">
+          <div 
+            className="absolute left-0 top-0 h-full bg-blue-400"
+            style={{ width: `${percentProgress}%` }}
+          ></div>
+        </div>
+      </div>
+    </div>
   );
 }
 
