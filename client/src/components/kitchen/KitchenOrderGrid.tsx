@@ -572,24 +572,25 @@ function OrderCard({
                 : "bg-green-100 text-green-800"
             )}>
               {(order.estimatedCompletionTime && new Date() > new Date(order.estimatedCompletionTime)) 
-                ? "Late" 
+                ? "Urgent" 
                 : "On Time"}
             </span>
           </div>
         </div>
         
-        {/* Alert Acknowledgment Button - only shown for critically late orders */}
+        {/* Simplified alert for critically late orders */}
         {orderDetails?.items && orderDetails.items.some(item => {
           if (item.status !== OrderItemStatus.COOKING || !item.firedAt || !item.cookSeconds) return false;
           const elapsedSeconds = Math.floor((new Date().getTime() - new Date(item.firedAt).getTime()) / 1000);
           return elapsedSeconds > (item.cookSeconds * 1.2); // 20% over cook time is critical
         }) && acknowledgeAlert && (
-          <div className="flex justify-center mb-3">
+          <div className="flex items-center justify-between mb-3 px-3 py-1.5 bg-slate-700 text-white text-xs rounded">
+            <span>Items need attention</span>
             <button
               onClick={() => acknowledgeAlert(order.id)}
-              className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors"
+              className="text-slate-300 hover:text-white"
             >
-              Acknowledge Alert
+              ×
             </button>
           </div>
         )}
@@ -783,47 +784,44 @@ function OrderCard({
                     
                     // Format display
                     if (remainingSeconds <= 0) {
-                      // Add a "Stop Flashing" button for critically late items
-                      if (isCriticallyLate && !acknowledgedItems[item.id]) {
-                        return (
-                          <div className="absolute -top-2 right-2 flex items-center gap-1">
-                            <div className="bg-green-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm ">
-                              READY TO CHECK
-                            </div>
+                      // Simplified "Check" button with X to dismiss for all items that need checking
+                      return (
+                        <div className="absolute -top-2 right-2 flex items-center gap-1">
+                          <div className="bg-slate-600 text-white text-xs px-2 py-0.5 rounded shadow-sm">
+                            CHECK
+                          </div>
+                          {!acknowledgedItems[item.id] && (
                             <button 
-                              className="bg-red-700 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm hover:bg-red-800"
+                              className="text-slate-500 bg-white border border-slate-300 w-4 h-4 flex items-center justify-center rounded-full text-xs hover:bg-slate-100"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleAcknowledgeItem(item.id);
                               }}
                             >
-                              ✓
+                              ×
                             </button>
-                          </div>
-                        );
-                      } else {
-                        return (
-                          <div className="absolute -top-2 right-2 bg-green-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm ">
-                            READY TO CHECK
-                          </div>
-                        );
-                      }
+                          )}
+                        </div>
+                      );
                     } else if (remainingSeconds < 30) {
+                      // Almost done - use amber
                       return (
-                        <div className="absolute -top-2 right-2 bg-green-600 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm">
-                          COOKING {minutes}:{seconds.toString().padStart(2, '0')}
+                        <div className="absolute -top-2 right-2 bg-amber-500 text-white px-2 py-0.5 text-xs rounded shadow-sm">
+                          {minutes}:{seconds.toString().padStart(2, '0')}
                         </div>
                       );
                     } else if (remainingSeconds < 60) {
+                      // Less than a minute - use slate/blue
                       return (
-                        <div className="absolute -top-2 right-2 bg-amber-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm">
-                          COOKING {minutes}:{seconds.toString().padStart(2, '0')}
+                        <div className="absolute -top-2 right-2 bg-slate-600 text-white px-2 py-0.5 text-xs rounded shadow-sm">
+                          {minutes}:{seconds.toString().padStart(2, '0')}
                         </div>
                       );
                     } else {
+                      // Normal cooking - use slate/blue
                       return (
-                        <div className="absolute -top-2 right-2 bg-blue-500 text-white px-2 py-0.5 text-xs font-bold rounded shadow-sm">
-                          COOKING {minutes}:{seconds.toString().padStart(2, '0')}
+                        <div className="absolute -top-2 right-2 bg-slate-600 text-white px-2 py-0.5 text-xs rounded shadow-sm">
+                          {minutes}:{seconds.toString().padStart(2, '0')}
                         </div>
                       );
                     }
