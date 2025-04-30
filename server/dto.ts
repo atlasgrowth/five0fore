@@ -61,6 +61,7 @@ export interface OrderDTO {
   specialInstructions: string | null;
   createdAt: string; // Always convert to string ISO format for consistency
   estimatedCompletionTime: string | null;
+  closedAt: string | null; // New field for when the order was closed
 }
 
 /**
@@ -79,7 +80,10 @@ export const toOrderDTO = (row: any): OrderDTO => ({
                           row.estimatedCompletionTime.toISOString() : 
                           (row.estimated_completion_time instanceof Date ? 
                            row.estimated_completion_time.toISOString() : 
-                           row.estimatedCompletionTime || row.estimated_completion_time)
+                           row.estimatedCompletionTime || row.estimated_completion_time),
+  closedAt: row.closedAt instanceof Date ? row.closedAt.toISOString() : 
+           (row.closed_at instanceof Date ? row.closed_at.toISOString() : 
+            row.closedAt || row.closed_at || null)
 });
 
 export interface OrderItemDTO {

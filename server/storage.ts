@@ -518,9 +518,9 @@ export class DatabaseStorage implements IStorage {
         const bayOrders = await this.getOrdersByBayId(updatedOrder.bayId);
         const activeOrdersForBay = bayOrders.filter(order => order.status !== 'CLOSED' && order.status !== 'CANCELLED');
         
-        // If no active orders left, update bay status to AVAILABLE
+        // If no active orders left, update bay status to empty
         if (activeOrdersForBay.length === 0) {
-          await this.updateBayStatus(updatedOrder.bayId, 'AVAILABLE');
+          await this.updateBayStatus(updatedOrder.bayId, 'empty');
         }
       } catch (error) {
         console.error(`Error updating bay status after closing order ${id}:`, error);

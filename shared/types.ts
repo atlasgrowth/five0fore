@@ -7,9 +7,11 @@ export type WebSocketMessageType =
   | "connect"
   | "register" 
   | "ordersUpdate"
+  | "closedOrdersUpdate"
   | "orderStatusUpdate"  
   | "order_created"
   | "order_updated"
+  | "ORDER_CLOSED"
   | "order_item_updated"
   | "bay_updated"
   | "item_cooking"
@@ -159,4 +161,12 @@ export interface ItemDeliveredMessage extends WebSocketMessage {
     bayNumber: number;
     status: string;
   };
+}
+
+/**
+ * Order closed message - sent when an order is closed
+ */
+export interface OrderClosedMessage extends WebSocketMessage {
+  type: "ORDER_CLOSED";
+  data: Order;
 }
