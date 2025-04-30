@@ -1,0 +1,28 @@
+﻿
+client:536 WebSocket connection to 'wss://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.dev/?token=DvuG-_VEotrC' failed: 
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=DvuG-_VEotrC' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+chunk-RPCDYKBN.js?v=d7d943bd:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+2
+KitchenView.tsx:14 Uncaught TypeError: Cannot destructure property 'lastMessage' of 'useWebSocket(...)' as it is undefined.
+    at KitchenView (KitchenView.tsx:14:11)
+chunk-RPCDYKBN.js?v=d7d943bd:14032 The above error occurred in the <KitchenView> component:
+
+    at KitchenView (https://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.dev/src/components/kitchen/KitchenView.tsx?t=1745982059838:27:21)
+    at Kitchen
+    at Route (https://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.de…/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=d7d943bd:323:16)
+    at Switch (https://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.de…/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=d7d943bd:379:17)
+    at Router
+    at OrderProvider (https://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.dev/src/contexts/OrderContext.tsx:21:33)
+    at Provider (https://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.de…unner/workspace/node_modules/.vite/deps/chunk-7SUNRGEF.js?v=d7d943bd:38:15)
+    at TooltipProvider (https://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.de…rkspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=d7d943bd:59:5)
+    at QueryClientProvider (https://e9c997ae-a324-4a88-bc32-f1b209808a07-00-shxc48w01jiu.worf.replit.de…rkspace/node_modules/.vite/deps/@tanstack_react-query.js?v=d7d943bd:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError	@	chunk-RPCDYKBN.js?v=d7d943bd:14032
+chunk-RPCDYKBN.js?v=d7d943bd:9129 Uncaught TypeError: Cannot destructure property 'lastMessage' of 'useWebSocket(...)' as it is undefined.
+    at KitchenView (KitchenView.tsx:14:11)

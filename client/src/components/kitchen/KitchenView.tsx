@@ -11,7 +11,8 @@ import { cn } from "@/lib/utils";
 export default function KitchenView() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { lastMessage } = useWebSocket();
+  // Initialize WebSocket connection for real-time updates
+  useWebSocket(); // No need to destructure as we're using React Query for state
   const [activeTab, setActiveTab] = useState<string>("all");
   const [currentTime, setCurrentTime] = useState<string>("");
   
@@ -42,41 +43,9 @@ export default function KitchenView() {
     return () => clearInterval(interval);
   }, []);
   
-  // Handle WebSocket messages
-  useEffect(() => {
-    if (lastMessage?.type === 'ordersUpdate') {
-      const updatedOrders = lastMessage.data as OrderSummary[];
-      
-      // Store current order IDs before updating data
-      const currentOrderIds = new Set(orders?.map(order => order.id) || []);
-      
-      // Update the query data
-      queryClient.setQueryData(['/api/orders'], updatedOrders);
-      
-      // Find truly new orders by checking for IDs that didn't exist before
-      const newOrders = updatedOrders.filter(order => 
-        !currentOrderIds.has(order.id) && order.status === 'NEW'
-      );
-      
-      // Only notify for actual new orders, not status changes
-      if (newOrders.length > 0) {
-        toast({
-          title: 'New Order Received',
-          description: `A new order has been placed.`,
-        });
-      }
-    } 
-    // Handle closed orders update message
-    else if (lastMessage?.type === 'closedOrdersUpdate') {
-      // Update the query cache with the latest orders
-      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
-    }
-    // Handle single order closed message
-    else if (lastMessage?.type === 'ORDER_CLOSED') {
-      // Invalidate the orders query to refresh the list
-      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
-    }
-  }, [lastMessage, queryClient, orders, toast]);
+  // WebSocket messages are now being handled by the useWebSocket hook directly
+  // All relevant queryClient cache updates are done there
+  // No need for additional effects here
   
   // Get only active orders (not served, closed, or cancelled)
   const activeOrders = orders?.filter(
