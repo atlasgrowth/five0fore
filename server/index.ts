@@ -3,9 +3,6 @@ import cors from 'cors';
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startKitchenTimers } from "./timers";
-import { startEtaWorker } from "./etaWorker";
-import { addUpdateKitchenMetricsJob } from "./queue";
-import { updateKitchenMetrics } from "./metrics";
 
 const app = express();
 app.use(cors({ origin: '*', credentials: true }));
@@ -74,50 +71,5 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
     // Start the kitchen timer background tasks
     startKitchenTimers();
-    
-    // Start the ETA calculation worker
-    if (process.env.DISABLE_ETA_WORKER !== 'true') {
-      log("Starting ETA calculation worker...");
-      const etaWorker = startEtaWorker();
-      
-      // Initialize kitchen metrics
-      updateKitchenMetrics().then(() => {
-        log("Initial kitchen metrics calculation complete");
-      }).catch(err => {
-        log(`Error during initial kitchen metrics calculation: ${err}`);
-      });
-      
-      // Schedule regular kitchen metrics updates (every 30 seconds)
-      const metricsInterval = setInterval(async () => {
-        try {
-          await addUpdateKitchenMetricsJob();
-        } catch (err) {
-          log(`Error scheduling kitchen metrics update: ${err}`);
-        }
-      }, 30000);
-      
-      // Handle graceful shutdown
-      const shutdown = async () => {
-        log('Shutting down ETA worker and metrics job...');
-        clearInterval(metricsInterval);
-        
-        try {
-          // Import closeQueues to shut down Redis connections
-          const { closeQueues } = await import('./queue');
-          await closeQueues();
-          log('Queue connections closed successfully');
-        } catch (err) {
-          log(`Error closing queue connections: ${err}`);
-        }
-        
-        process.exit(0);
-      };
-      
-      // Register shutdown handlers
-      process.on('SIGINT', shutdown);
-      process.on('SIGTERM', shutdown);
-    } else {
-      log("ETA calculation worker disabled by environment variable");
-    }
   });
 })();

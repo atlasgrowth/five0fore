@@ -1,163 +1,199 @@
-import { AttentionLevel } from "@shared/schema";
+import { AttentionLevel } from '@shared/schema';
 
-// Default timing values
-export const DEFAULT_COOK_SECONDS = 300; // 5 minutes default cook time
-export const DEFAULT_PLATING_SECONDS = 120; // 2 minutes default plating time
-export const PREP_BUFFER_SECONDS = 60; // 1 minute from order to firing
-export const EXPO_BUFFER_SECONDS = 60; // 1 minute from ready to delivery
-
-// Thresholds for attention levels in seconds (converted to percentages at runtime)
-export const ATTENTION_THRESHOLD = 0.8; // 80% of expected time
-export const PRIORITY_THRESHOLD = 1.0; // 100% of expected time (right on time)
-export const CRITICAL_THRESHOLD = 1.25; // 125% of expected time (25% overdue)
-
-// ETA calculation helpers
 /**
- * Apply a load factor to cook time
+ * Kitchen timing constants
+ */
+export const PREP_BUFFER_SECONDS = 150; // 2.5 minutes standard prep time buffer
+export const EXPO_BUFFER_SECONDS = 150; // 2.5 minutes standard expo/delivery buffer
+export const DEFAULT_COOK_SECONDS = 300; // 5 minutes default cooking time
+export const DEFAULT_PLATING_SECONDS = 120; // 2 minutes default plating time
+
+// Default load factor of 1.0 means normal kitchen load
+const DEFAULT_LOAD_FACTOR = 1.0;
+
+// Load factor damping to prevent wild swings (0.5 means 50% damping)
+const DEFAULT_LOAD_DAMPING = 0.5;
+
+/**
+ * Apply load factor with damping to prevent wild time estimates
+ * Formula: Base time × (damping + (1-damping) × loadFactor)
  * 
- * @param baseSeconds Base cook time in seconds
- * @param loadFactor Current kitchen load factor (1.0 = normal)
- * @param impact How much the load factor impacts this calculation (0-1)
- * @returns Adjusted cook time in seconds
+ * @param baseSeconds The base time in seconds
+ * @param loadFactor The current kitchen load factor (1.0 = normal)
+ * @param dampingCoefficient How much to dampen the load factor (0.5 = 50%)
+ * @returns Adjusted time in seconds
  */
 export function applyLoadFactor(
   baseSeconds: number, 
-  loadFactor: number,
-  impact: number = 0.5
+  loadFactor: number = DEFAULT_LOAD_FACTOR,
+  dampingCoefficient: number = DEFAULT_LOAD_DAMPING
 ): number {
-  // Ensure we have some base time
-  if (baseSeconds <= 0) baseSeconds = DEFAULT_COOK_SECONDS;
+  // Ensure load factor is positive
+  const safeLoadFactor = Math.max(0.1, loadFactor);
   
-  // Normalize impact to 0-1 range
-  impact = Math.max(0, Math.min(1, impact));
-  
-  // Calculate adjustment factor: load factor * impact
-  // For example: 1.5 load with 0.5 impact = 1.25 multiplier
-  // This means a 50% loaded kitchen with 50% impact adds 25% to cook time
-  const adjustment = 1 + ((loadFactor - 1) * impact);
-  
-  // Apply adjustment and round to whole seconds
-  return Math.round(baseSeconds * adjustment);
+  // Apply damping: adjusted = base × (damping + (1-damping) × loadFactor)
+  // This keeps the adjustment from swinging wildly
+  return Math.round(baseSeconds * (dampingCoefficient + (1 - dampingCoefficient) * safeLoadFactor));
 }
 
 /**
- * Calculate attention level based on thresholds and ETA
+ * Calculate total expected time for an order with load factor adjustment
+ * Formula: Prep buffer + Longest cook time + Expo buffer, all adjusted by load
  * 
- * @param estimatedCompletionTime The order's ETA
- * @param attentionThreshold Threshold for ATTENTION level (percentage of expected time)
- * @param priorityThreshold Threshold for PRIORITY level (percentage of expected time)
- * @param criticalThreshold Threshold for CRITICAL level (percentage of expected time) 
- * @returns The attention level (NORMAL, ATTENTION, PRIORITY, CRITICAL)
+ * @param longestCookSeconds The cook time for the longest item in the order
+ * @param loadFactor Current kitchen load factor (default 1.0)
+ * @param loadDamping Damping coefficient (default 0.5)
+ * @returns Total expected time in seconds
+ */
+export function calculateTotalOrderTime(
+  longestCookSeconds: number,
+  loadFactor: number = DEFAULT_LOAD_FACTOR,
+  loadDamping: number = DEFAULT_LOAD_DAMPING
+): number {
+  const adjustedPrepBuffer = applyLoadFactor(PREP_BUFFER_SECONDS, loadFactor, loadDamping);
+  const adjustedCookTime = applyLoadFactor(longestCookSeconds, loadFactor, loadDamping);
+  const adjustedExpoBuffer = applyLoadFactor(EXPO_BUFFER_SECONDS, loadFactor, loadDamping);
+  
+  return adjustedPrepBuffer + adjustedCookTime + adjustedExpoBuffer;
+}
+
+/**
+ * Calculate when an order should be ready with load factor adjustment
+ * 
+ * @param orderCreatedAt When the order was created
+ * @param longestCookSeconds The cook time for the longest item
+ * @param loadFactor Current kitchen load factor (default 1.0)
+ * @param loadDamping Damping coefficient (default 0.5)
+ * @returns Date when the order should be ready
+ */
+export function calculateOrderReadyTime(
+  orderCreatedAt: Date, 
+  longestCookSeconds: number, 
+  loadFactor: number = DEFAULT_LOAD_FACTOR,
+  loadDamping: number = DEFAULT_LOAD_DAMPING
+): Date {
+  const totalSeconds = calculateTotalOrderTime(longestCookSeconds, loadFactor, loadDamping);
+  const readyAt = new Date(orderCreatedAt);
+  readyAt.setSeconds(readyAt.getSeconds() + totalSeconds);
+  return readyAt;
+}
+
+/**
+ * Calculate the attention level for an order based on its estimated completion time
+ * 
+ * @param estimatedCompletionTime When the order is expected to be ready
+ * @param attentionThreshold Percentage of time when order needs attention (default 90%)
+ * @param priorityThreshold Percentage of time when order becomes priority (default 120%)
+ * @param criticalThreshold Percentage of time when order becomes critical (default 150%)
+ * @returns The attention level for the order
  */
 export function calculateAttentionLevel(
-  estimatedCompletionTime: Date | null,
-  attentionThreshold: number = ATTENTION_THRESHOLD,
-  priorityThreshold: number = PRIORITY_THRESHOLD,
-  criticalThreshold: number = CRITICAL_THRESHOLD
+  estimatedCompletionTime: Date | string | null,
+  attentionThreshold: number = 0.9,  // 90% - less sensitivity
+  priorityThreshold: number = 1.2,   // 120% - more tolerance
+  criticalThreshold: number = 1.5    // 150% - much rarer critical status
 ): AttentionLevel {
-  // If no ETA, assume normal
-  if (!estimatedCompletionTime) return AttentionLevel.NORMAL;
+  if (!estimatedCompletionTime) {
+    return AttentionLevel.NORMAL;
+  }
   
+  const estCompleteTime = typeof estimatedCompletionTime === 'string' 
+    ? new Date(estimatedCompletionTime) 
+    : estimatedCompletionTime;
+    
   const now = new Date();
-  const etaTimestamp = new Date(estimatedCompletionTime).getTime();
   
-  // Already past ETA? Calculate how far past
-  if (now > estimatedCompletionTime) {
-    // Get the estimated total time (from creation to completion)
-    const expectedMinutes = 10; // Default to 10 minutes if we can't calculate
+  // Simple approach: just compare current time to estimated completion time
+  // If we're past estimated time, it's delayed
+  const timeRemainingMs = estCompleteTime.getTime() - now.getTime();
+  
+  // Convert to minutes for more intuitive understanding
+  const timeRemainingMinutes = timeRemainingMs / (1000 * 60);
+  
+  // If estimated completion is more than 10 minutes in the future, definitely normal
+  if (timeRemainingMinutes > 10) {
+    return AttentionLevel.NORMAL;
+  }
+  
+  // If we've passed the estimated completion time
+  if (timeRemainingMs <= 0) {
+    // How late are we?
+    const minutesLate = Math.abs(timeRemainingMinutes);
     
-    // How far past the ETA we are, as a ratio of the total expected time
-    const minutesPastEta = (now.getTime() - etaTimestamp) / 60000;
-    const overdueFactor = minutesPastEta / expectedMinutes;
-    
-    // Assign attention level based on how overdue
-    if (overdueFactor > criticalThreshold - 1) {
+    // More than 7 minutes late = critical
+    if (minutesLate > 7) {
       return AttentionLevel.CRITICAL;
-    } else if (overdueFactor > priorityThreshold - 1) {
+    }
+    // 3-7 minutes late = priority
+    else if (minutesLate > 3) {
       return AttentionLevel.PRIORITY;
-    } else {
+    }
+    // 0-3 minutes late = attention
+    else {
       return AttentionLevel.ATTENTION;
     }
   }
   
-  // How close we are to the ETA as a ratio
-  // 1.0 = at ETA, 0 = just started
-  // This ratio DECREASES as we get closer to ETA
-  const msUntilEta = etaTimestamp - now.getTime();
-  const minutesUntilEta = msUntilEta / 60000;
-  
-  // Estimate the total expected time (10 minute default)
-  const expectedMinutes = 10; 
-  const remainingRatio = minutesUntilEta / expectedMinutes;
-  
-  // Assign attention level based on how close to ETA
-  if (remainingRatio < 1 - criticalThreshold) {
-    return AttentionLevel.CRITICAL;
-  } else if (remainingRatio < 1 - priorityThreshold) {
-    return AttentionLevel.PRIORITY;
-  } else if (remainingRatio < 1 - attentionThreshold) {
+  // If estimated completion is approaching but not passed
+  // Less than 2 minutes remaining = attention
+  if (timeRemainingMinutes <= 2) {
     return AttentionLevel.ATTENTION;
-  } else {
-    return AttentionLevel.NORMAL;
   }
+  
+  // Otherwise normal
+  return AttentionLevel.NORMAL;
 }
 
 /**
- * Calculate a priority score for an order
- * 
- * Higher score = higher priority
- * This is used to sort orders on the kitchen dashboard
+ * Calculate the priority score for an order
+ * Higher scores = higher priority in the queue
  * 
  * @param createdAt When the order was created
- * @param estimatedCompletionTime Expected completion time
- * @param itemCount Number of items in the order
- * @param longestCookTime Longest cook time among items
- * @param waitRatioWeight Weight for the wait ratio (how close to ETA)
- * @param orderAgeWeight Weight for the order age (how long since created)
- * @param cookComplexityWeight Weight for the cooking complexity
+ * @param estimatedCompletionTime When the order should be ready
+ * @param totalItems Number of items in the order
+ * @param longestCookTime Cook time of the longest item (seconds)
+ * @param waitRatioWeight Weight for time waited / expected ratio (default 2.0)
+ * @param orderAgeWeight Weight for order age in minutes (default 1.0)
+ * @param cookComplexityWeight Weight for cooking complexity (default 0.5)
+ * @returns Priority score (higher = more urgent)
  */
 export function calculatePriorityScore(
-  createdAt: Date,
-  estimatedCompletionTime: Date | null,
-  itemCount: number,
+  createdAt: Date | string,
+  estimatedCompletionTime: Date | string | null,
+  totalItems: number,
   longestCookTime: number,
   waitRatioWeight: number = 2.0,
   orderAgeWeight: number = 1.0,
   cookComplexityWeight: number = 0.5
 ): number {
+  const orderTime = typeof createdAt === 'string' ? new Date(createdAt) : createdAt;
   const now = new Date();
   
-  // Calculate wait ratio (how close to ETA)
-  // Higher = closer to or past ETA
+  // Component 1: Order age in minutes
+  const orderAgeMinutes = (now.getTime() - orderTime.getTime()) / (1000 * 60);
+  
+  // Component 2: Wait ratio (current time / expected time)
   let waitRatio = 0;
   if (estimatedCompletionTime) {
-    const etaTimestamp = new Date(estimatedCompletionTime).getTime();
-    const totalWaitTime = etaTimestamp - new Date(createdAt).getTime();
-    const elapsedTime = now.getTime() - new Date(createdAt).getTime();
+    const estCompleteTime = typeof estimatedCompletionTime === 'string' 
+      ? new Date(estimatedCompletionTime) 
+      : estimatedCompletionTime;
+      
+    // Expected wait time in minutes
+    const expectedWaitMinutes = (estCompleteTime.getTime() - orderTime.getTime()) / (1000 * 60);
     
-    if (totalWaitTime > 0) {
-      waitRatio = Math.min(2.0, elapsedTime / totalWaitTime);
-    }
+    // Actual wait time so far
+    waitRatio = orderAgeMinutes / expectedWaitMinutes;
   }
   
-  // Calculate order age score (how long since created)
-  // Older orders get higher priority
-  const orderAgeMinutes = (now.getTime() - new Date(createdAt).getTime()) / 60000;
-  const orderAgeScore = Math.min(1.0, orderAgeMinutes / 30); // Cap at 30 minutes old
-  
-  // Calculate cook complexity score
-  // More complex orders (more items, longer cook times) get higher priority
-  const itemCountScore = Math.min(1.0, itemCount / 10); // Cap at 10 items
-  const cookTimeScore = Math.min(1.0, longestCookTime / 900); // Cap at 15 minutes (900s)
-  const cookComplexityScore = (itemCountScore + cookTimeScore) / 2;
+  // Component 3: Cooking complexity (based on items and cook time)
+  const cookComplexity = totalItems * (longestCookTime / DEFAULT_COOK_SECONDS);
   
   // Calculate final priority score
-  const priorityScore = (
-    (waitRatio * waitRatioWeight) +
-    (orderAgeScore * orderAgeWeight) +
-    (cookComplexityScore * cookComplexityWeight)
-  ) / (waitRatioWeight + orderAgeWeight + cookComplexityWeight);
-  
-  // Convert to 0-100 scale and round
-  return Math.round(priorityScore * 100);
+  const priorityScore = 
+    (waitRatio * waitRatioWeight) + 
+    (orderAgeMinutes * orderAgeWeight / 10) + // Divide by 10 to normalize age contribution
+    (cookComplexity * cookComplexityWeight);
+    
+  return Number(priorityScore.toFixed(2)); // Round to 2 decimal places
 }
