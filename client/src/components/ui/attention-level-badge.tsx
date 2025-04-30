@@ -1,7 +1,6 @@
 import { cn } from "@/lib/utils";
 import { AttentionLevel } from "@shared/schema";
 import { AlertCircle, AlertOctagon, AlertTriangle, CheckCircle } from "lucide-react";
-import { useEffect, useState } from "react";
 
 interface AttentionLevelBadgeProps {
   level: AttentionLevel;
@@ -14,6 +13,7 @@ interface AttentionLevelBadgeProps {
 /**
  * Component to visually represent attention levels with appropriate styling
  * Supports different levels of visual intensity based on attention level
+ * No flashing effects - removed per user request
  */
 export function AttentionLevelBadge({
   level,
@@ -22,23 +22,6 @@ export function AttentionLevelBadge({
   showLabel = true,
   compact = false,
 }: AttentionLevelBadgeProps) {
-  // State for critical level flashing effect (much less intense than before)
-  const [flash, setFlash] = useState(false);
-  
-  // Only flash for CRITICAL level and at a much slower rate
-  useEffect(() => {
-    if (level === AttentionLevel.CRITICAL) {
-      // Slower flash interval - 2.5 seconds instead of rapid flashing
-      const interval = setInterval(() => {
-        setFlash((prev) => !prev);
-      }, 2500);
-      
-      return () => clearInterval(interval);
-    } else {
-      setFlash(false);
-    }
-  }, [level]);
-
   // Map attention levels to colors and icons
   const getAttentionStyles = () => {
     switch (level) {
@@ -62,11 +45,8 @@ export function AttentionLevelBadge({
         };
       case AttentionLevel.CRITICAL:
         return {
-          // Gentle pulsing for critical instead of jarring flashing
-          containerClass: cn(
-            "bg-red-100 text-red-800 border-red-300",
-            flash ? "opacity-80" : "opacity-100"
-          ),
+          // No flashing, just a strong visual indicator
+          containerClass: "bg-red-100 text-red-800 border-red-500 border-2",
           icon: <AlertOctagon className="h-4 w-4" />,
           label: "Critical",
         };

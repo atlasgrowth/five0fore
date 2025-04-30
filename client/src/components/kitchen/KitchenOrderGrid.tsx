@@ -126,9 +126,9 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
     if (orderData && orderData.items && orderData.items.length > 0) {
       const isAcknowledged = acknowledgedAlerts[order.id] || false;
       
-      // Check if any items are critically late
+      // Check if any items are critically late (no pulse animation per user request)
       if (isAnyCriticallyLate(orderData.items) && !isAcknowledged) {
-        return "bg-red-50 border-2 border-red-500 shadow-md animate-pulse";
+        return "bg-red-50 border-2 border-red-500 shadow-md";
       }
       
       // Check if any items are behind schedule
