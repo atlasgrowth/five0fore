@@ -833,6 +833,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: 'Associated order not found' });
       }
       
+      // Dynamically update estimated completion time whenever an item is fired
+      const updatedOrder = await updateOrderEstimatedCompletionTime(updatedItem.orderId);
+      
       // Get bay info
       const bay = await storage.getBayById(order.bayId);
       
@@ -848,7 +851,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           readyAt: updatedItem.readyAt!.toISOString(),
           bayId: order.bayId,
           bayNumber: bay?.number || order.bayId,
-          status: OrderItemStatus.COOKING
+          status: OrderItemStatus.COOKING,
+          // Include the updated estimated completion time
+          estimatedCompletionTime: updatedOrder?.estimatedCompletionTime 
+            ? updatedOrder.estimatedCompletionTime.toISOString() 
+            : order.estimatedCompletionTime?.toISOString() || null
         }
       };
       
@@ -858,8 +865,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send update to the specific bay
       sendBayUpdate(order.bayId, 'item_cooking', itemCookingMessage.data);
       
-      // Return the updated item
-      res.json(toOrderItemDTO(updatedItem));
+      // Return the updated item with the new estimated completion time
+      res.json({
+        ...toOrderItemDTO(updatedItem),
+        estimatedCompletionTime: updatedOrder?.estimatedCompletionTime || order.estimatedCompletionTime
+      });
     } catch (error) {
       console.error('Error firing order item:', error);
       res.status(500).json({ message: 'Failed to fire order item' });
@@ -883,6 +893,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: 'Associated order not found' });
       }
       
+      // Dynamically update estimated completion time when an item transitions to plating
+      const updatedOrder = await updateOrderEstimatedCompletionTime(updatedItem.orderId);
+      
       // Create properly typed item plating message with all needed context
       const itemPlatingMessage: ItemPlatingMessage = {
         type: 'item_plating',
@@ -894,7 +907,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           platingAt: updatedItem.platingAt ? updatedItem.platingAt.toISOString() : new Date().toISOString(),
           bayId: order.bayId,
           bayNumber: bay?.number || order.bayId,
-          status: OrderItemStatus.PLATING
+          status: OrderItemStatus.PLATING,
+          // Include the updated estimated completion time
+          estimatedCompletionTime: updatedOrder?.estimatedCompletionTime 
+            ? updatedOrder.estimatedCompletionTime.toISOString() 
+            : order.estimatedCompletionTime?.toISOString() || null
         }
       };
       
@@ -907,8 +924,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const endTime = Date.now();
       console.log(`Plating operation completed in ${endTime - startTime}ms`);
       
-      // Return the updated item
-      res.json(toOrderItemDTO(updatedItem));
+      // Return the updated item with the new estimated completion time
+      res.json({
+        ...toOrderItemDTO(updatedItem),
+        estimatedCompletionTime: updatedOrder?.estimatedCompletionTime || order.estimatedCompletionTime
+      });
     } catch (error) {
       console.error('Error marking order item as plating:', error);
       res.status(500).json({ message: 'Failed to mark order item as plating' });
@@ -934,6 +954,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: 'Associated order not found' });
       }
       
+      // Dynamically update estimated completion time when an item is marked ready
+      const updatedOrder = await updateOrderEstimatedCompletionTime(updatedItem.orderId);
+      
       // Get bay info
       const bay = await storage.getBayById(order.bayId);
       
@@ -953,7 +976,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           elapsedSeconds,
           bayId: order.bayId,
           bayNumber: bay?.number || order.bayId,
-          status: OrderItemStatus.READY
+          status: OrderItemStatus.READY,
+          // Include the updated estimated completion time
+          estimatedCompletionTime: updatedOrder?.estimatedCompletionTime 
+            ? updatedOrder.estimatedCompletionTime.toISOString() 
+            : order.estimatedCompletionTime?.toISOString() || null
         }
       };
       
@@ -963,8 +990,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send update to the specific bay
       sendBayUpdate(order.bayId, 'item_ready', itemReadyMessage.data);
       
-      // Return the updated item
-      res.json(toOrderItemDTO(updatedItem));
+      // Return the updated item with the new estimated completion time
+      res.json({
+        ...toOrderItemDTO(updatedItem),
+        estimatedCompletionTime: updatedOrder?.estimatedCompletionTime || order.estimatedCompletionTime
+      });
     } catch (error) {
       console.error('Error marking order item as ready:', error);
       res.status(500).json({ message: 'Failed to mark order item as ready' });
@@ -990,6 +1020,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: 'Associated order not found' });
       }
       
+      // Dynamically update estimated completion time when an item is marked delivered
+      const updatedOrder = await updateOrderEstimatedCompletionTime(updatedItem.orderId);
+      
       // Get bay info
       const bay = await storage.getBayById(order.bayId);
       
@@ -1009,7 +1042,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalCookTime,
           bayId: order.bayId,
           bayNumber: bay?.number || order.bayId,
-          status: OrderItemStatus.DELIVERED
+          status: OrderItemStatus.DELIVERED,
+          // Include the updated estimated completion time
+          estimatedCompletionTime: updatedOrder?.estimatedCompletionTime 
+            ? updatedOrder.estimatedCompletionTime.toISOString() 
+            : order.estimatedCompletionTime?.toISOString() || null
         }
       };
       
@@ -1046,8 +1083,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         broadcastUpdate('ordersUpdate', updatedOrders);
       }
       
-      // Return the updated item
-      res.json(toOrderItemDTO(updatedItem));
+      // Return the updated item with the new estimated completion time
+      res.json({
+        ...toOrderItemDTO(updatedItem),
+        estimatedCompletionTime: updatedOrder?.estimatedCompletionTime || order.estimatedCompletionTime
+      });
     } catch (error) {
       console.error('Error marking order item as delivered:', error);
       res.status(500).json({ message: 'Failed to mark order item as delivered' });
