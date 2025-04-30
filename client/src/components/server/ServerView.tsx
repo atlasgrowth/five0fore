@@ -144,6 +144,14 @@ export default function ServerView() {
   // Find active orders for a specific bay
   const findActiveBayOrders = (bayId: number) => {
     if (!orders) return [];
+    
+    // Debugging to help us understand what's happening with orders
+    console.log(`Checking orders for bay ${bayId}:`, 
+      orders.filter(order => order.bayId === bayId)
+        .map(o => ({ id: o.id, status: o.status, bayId: o.bayId }))
+    );
+    
+    // Filter for active orders (anything that's not CLOSED or CANCELLED)
     return orders.filter(order => 
       order.bayId === bayId && 
       !['CLOSED', 'CANCELLED'].includes(order.status.toUpperCase())
@@ -158,12 +166,24 @@ export default function ServerView() {
   // Handle bay click - check if there are active orders for this bay
   const handleBayClick = (bayId: number) => {
     const activeOrders = findActiveBayOrders(bayId);
+    console.log(`Bay ${bayId} has ${activeOrders.length} active orders`);
     
-    if (activeOrders.length > 0) {
+    // Get bay from cache to check its status
+    const bay = bays.find(b => b.id === bayId);
+    console.log(`Bay ${bayId} status:`, bay?.status);
+    
+    // Check bay status - if not empty/available, assume it has active orders
+    // This makes the system more robust if the orders data is somehow out of sync
+    const hasActiveOrders = activeOrders.length > 0 || 
+      (bay && bay.status && !['empty', 'available'].includes(bay.status.toLowerCase()));
+    
+    if (hasActiveOrders) {
       // Bay has active orders - show order details
+      console.log(`Showing existing orders for bay ${bayId}`);
       setDrawer({ open: true, bayId, viewExistingOrders: true });
     } else {
       // No active orders - show new order form
+      console.log(`Showing new order form for bay ${bayId}`);
       setDrawer({ open: true, bayId, viewExistingOrders: false });
     }
   };

@@ -9,8 +9,11 @@ import { SeatingType } from "@shared/schema";
 
 // Bay color helper function to ensure consistent coloring based on status
 export function bayColour(status: string) {
-  switch (status) {
+  const normalizedStatus = status.toUpperCase();
+  
+  switch (normalizedStatus) {
     case "NEW":
+    case "ACTIVE":
       return "bg-blue-100";
     case "COOKING":
       return "bg-yellow-200";
@@ -18,6 +21,11 @@ export function bayColour(status: string) {
       return "bg-purple-200";
     case "READY":
       return "bg-green-200";
+    case "SERVED":
+      return "bg-blue-50";
+    case "CLOSED":
+      return "bg-gray-300";
+    case "EMPTY":
     default:
       return "bg-gray-100";
   }
