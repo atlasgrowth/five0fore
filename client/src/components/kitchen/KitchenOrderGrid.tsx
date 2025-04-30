@@ -563,18 +563,42 @@ function OrderCard({
               )}
             </div>
             
-            {/* Simplified status indicator - just on-time/late without detailed text */}
-            <span className={cn(
-              "mt-1 text-xs font-medium px-2 py-0.5 rounded-full",
-              // Is the order actually late compared to its estimated completion time?
-              (order.estimatedCompletionTime && new Date() > new Date(order.estimatedCompletionTime))
-                ? "bg-red-100 text-red-800" 
-                : "bg-green-100 text-green-800"
-            )}>
-              {(order.estimatedCompletionTime && new Date() > new Date(order.estimatedCompletionTime)) 
-                ? "Urgent" 
-                : "On Time"}
-            </span>
+            {/* Time indicator showing minutes ahead/behind schedule */}
+            {order.estimatedCompletionTime && (
+              <span className={cn(
+                "mt-1 text-xs font-medium px-2 py-0.5 rounded-full",
+                (() => {
+                  // Calculate time difference in minutes
+                  const currentTime = new Date();
+                  const estimatedTime = new Date(order.estimatedCompletionTime);
+                  const diffMs = estimatedTime.getTime() - currentTime.getTime();
+                  const diffMinutes = Math.round(diffMs / 60000);
+                  
+                  // Choose color based on time difference
+                  if (diffMinutes < -5) return "bg-red-100 text-red-800"; // More than 5 min late
+                  if (diffMinutes < 0) return "bg-amber-100 text-amber-800"; // Up to 5 min late
+                  if (diffMinutes <= 5) return "bg-green-100 text-green-800"; // On time (within 5 min)
+                  return "bg-blue-100 text-blue-800"; // Ahead of schedule
+                })()
+              )}>
+                {(() => {
+                  // Calculate time difference in minutes
+                  const currentTime = new Date();
+                  const estimatedTime = new Date(order.estimatedCompletionTime);
+                  const diffMs = estimatedTime.getTime() - currentTime.getTime();
+                  const diffMinutes = Math.round(diffMs / 60000);
+                  
+                  // Format the message
+                  if (diffMinutes < 0) {
+                    return `${Math.abs(diffMinutes)}m behind`;
+                  } else if (diffMinutes === 0) {
+                    return "On time";
+                  } else {
+                    return `${diffMinutes}m ahead`;
+                  }
+                })()}
+              </span>
+            )}
           </div>
         </div>
         
