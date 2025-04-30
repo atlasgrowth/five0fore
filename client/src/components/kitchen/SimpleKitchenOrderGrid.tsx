@@ -13,7 +13,7 @@ function StartTimer({
   cookSeconds, 
   longestCookItem 
 }: { 
-  orderCreatedAt: string, 
+  orderCreatedAt: string | Date, 
   cookSeconds: number, 
   longestCookItem: boolean 
 }) {
@@ -139,7 +139,7 @@ function StartTimer({
 }
 
 // Simple cooking timer component
-function CookingTimer({ firedAt, cookSeconds }: { firedAt: string, cookSeconds: number }) {
+function CookingTimer({ firedAt, cookSeconds }: { firedAt: string | Date, cookSeconds: number }) {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [percentage, setPercentage] = useState<number>(0);
   
@@ -397,130 +397,151 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
         </div>
       </div>
       
-      {/* Orders grid with fixed columns based on status */}
+      {/* Orders grid with horizontal rows based on status */}
       <div 
         ref={containerRef}
         id="orders-scroll-container"
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 overflow-auto pb-6 pt-2"
+        className="space-y-6 overflow-auto pb-6 pt-2"
       >
-        {/* NEW & COOKING column (leftmost) */}
+        {/* NEW & COOKING row (top) */}
         <div className="space-y-4">
-          <h2 className="font-bold text-lg text-primary border-b pb-2">
+          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-primary border-l-4 border-blue-500">
             New & Cooking ({ordersByStatus.new.length + ordersByStatus.cooking.length})
           </h2>
           
-          {/* NEW orders first */}
-          {ordersByStatus.new.map((order) => (
-            <div key={order.id} className="min-w-full">
-              <OrderCard
-                order={order}
-                toggleItemCompletion={toggleItemCompletion}
-                markOrderAsReady={markOrderAsReady}
-                closeOrder={closeOrder}
-              />
-            </div>
-          ))}
-          
-          {/* Then COOKING orders */}
-          {ordersByStatus.cooking.map((order) => (
-            <div key={order.id} className="min-w-full">
-              <OrderCard
-                order={order}
-                toggleItemCompletion={toggleItemCompletion}
-                markOrderAsReady={markOrderAsReady}
-                closeOrder={closeOrder}
-              />
-            </div>
-          ))}
-          
-          {ordersByStatus.new.length === 0 && ordersByStatus.cooking.length === 0 && (
+          {ordersByStatus.new.length === 0 && ordersByStatus.cooking.length === 0 ? (
             <div className="bg-white p-4 rounded-md text-center text-gray-500 border">
               No new or cooking orders
             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {/* NEW orders first */}
+              {ordersByStatus.new.map((order) => (
+                <div key={order.id}>
+                  <OrderCard
+                    order={order}
+                    toggleItemCompletion={toggleItemCompletion}
+                    markOrderAsReady={markOrderAsReady}
+                    closeOrder={closeOrder}
+                  />
+                </div>
+              ))}
+              
+              {/* Then COOKING orders */}
+              {ordersByStatus.cooking.map((order) => (
+                <div key={order.id}>
+                  <OrderCard
+                    order={order}
+                    toggleItemCompletion={toggleItemCompletion}
+                    markOrderAsReady={markOrderAsReady}
+                    closeOrder={closeOrder}
+                  />
+                </div>
+              ))}
+            </div>
           )}
         </div>
         
-        {/* PLATING column (second from right) */}
+        {/* PLATING row (second) */}
         <div className="space-y-4">
-          <h2 className="font-bold text-lg text-purple-700 border-b pb-2">
+          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-purple-700 border-l-4 border-purple-500">
             Plating ({ordersByStatus.plating.length})
           </h2>
           
-          {ordersByStatus.plating.map((order) => (
-            <div key={order.id} className="min-w-full">
-              <OrderCard
-                order={order}
-                toggleItemCompletion={toggleItemCompletion}
-                markOrderAsReady={markOrderAsReady}
-                closeOrder={closeOrder}
-              />
-            </div>
-          ))}
-          
-          {ordersByStatus.plating.length === 0 && (
+          {ordersByStatus.plating.length === 0 ? (
             <div className="bg-white p-4 rounded-md text-center text-gray-500 border">
               No orders being plated
             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {ordersByStatus.plating.map((order) => (
+                <div key={order.id}>
+                  <OrderCard
+                    order={order}
+                    toggleItemCompletion={toggleItemCompletion}
+                    markOrderAsReady={markOrderAsReady}
+                    closeOrder={closeOrder}
+                  />
+                </div>
+              ))}
+            </div>
           )}
         </div>
         
-        {/* READY column (rightmost) */}
+        {/* READY row (third) */}
         <div className="space-y-4">
-          <h2 className="font-bold text-lg text-green-700 border-b pb-2">
+          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-green-700 border-l-4 border-green-500">
             Ready ({ordersByStatus.ready.length})
           </h2>
           
-          {ordersByStatus.ready.map((order) => (
-            <div key={order.id} className="min-w-full">
-              <OrderCard
-                order={order}
-                toggleItemCompletion={toggleItemCompletion}
-                markOrderAsReady={markOrderAsReady}
-                closeOrder={closeOrder}
-              />
-            </div>
-          ))}
-          
-          {ordersByStatus.ready.length === 0 && (
+          {ordersByStatus.ready.length === 0 ? (
             <div className="bg-white p-4 rounded-md text-center text-gray-500 border">
               No orders ready to serve
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {ordersByStatus.ready.map((order) => (
+                <div key={order.id}>
+                  <OrderCard
+                    order={order}
+                    toggleItemCompletion={toggleItemCompletion}
+                    markOrderAsReady={markOrderAsReady}
+                    closeOrder={closeOrder}
+                  />
+                </div>
+              ))}
             </div>
           )}
         </div>
         
-        {/* SERVED & CLOSED column */}
+        {/* SERVED row (fourth) */}
         <div className="space-y-4">
-          <h2 className="font-bold text-lg text-blue-700 border-b pb-2">
-            Served & Closed ({ordersByStatus.served.length + ordersByStatus.closed.length})
+          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-blue-700 border-l-4 border-blue-400">
+            Served ({ordersByStatus.served.length})
           </h2>
           
-          {/* SERVED orders first */}
-          {ordersByStatus.served.map((order) => (
-            <div key={order.id} className="min-w-full">
-              <OrderCard
-                order={order}
-                toggleItemCompletion={toggleItemCompletion}
-                markOrderAsReady={markOrderAsReady}
-                closeOrder={closeOrder}
-              />
-            </div>
-          ))}
-          
-          {/* Then CLOSED orders */}
-          {ordersByStatus.closed.map((order) => (
-            <div key={order.id} className="min-w-full">
-              <OrderCard
-                order={order}
-                toggleItemCompletion={toggleItemCompletion}
-                markOrderAsReady={markOrderAsReady}
-                closeOrder={closeOrder}
-              />
-            </div>
-          ))}
-          
-          {ordersByStatus.served.length === 0 && ordersByStatus.closed.length === 0 && (
+          {ordersByStatus.served.length === 0 ? (
             <div className="bg-white p-4 rounded-md text-center text-gray-500 border">
-              No served or closed orders
+              No served orders
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {ordersByStatus.served.map((order) => (
+                <div key={order.id}>
+                  <OrderCard
+                    order={order}
+                    toggleItemCompletion={toggleItemCompletion}
+                    markOrderAsReady={markOrderAsReady}
+                    closeOrder={closeOrder}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {/* CLOSED row (bottom) */}
+        <div className="space-y-4">
+          <h2 className="font-bold text-lg bg-white p-2 rounded-md shadow-sm text-gray-700 border-l-4 border-gray-500">
+            Closed ({ordersByStatus.closed.length})
+          </h2>
+          
+          {ordersByStatus.closed.length === 0 ? (
+            <div className="bg-white p-4 rounded-md text-center text-gray-500 border">
+              No closed orders
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {ordersByStatus.closed.map((order) => (
+                <div key={order.id}>
+                  <OrderCard
+                    order={order}
+                    toggleItemCompletion={toggleItemCompletion}
+                    markOrderAsReady={markOrderAsReady}
+                    closeOrder={closeOrder}
+                  />
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -576,7 +597,8 @@ function OrderCard({
     if (!order.estimatedCompletionTime) return null;
     
     const currentTime = new Date();
-    const estimatedTime = new Date(order.estimatedCompletionTime);
+    // Ensure the estimatedCompletionTime is treated as a string before converting to Date
+    const estimatedTime = new Date(String(order.estimatedCompletionTime));
     const diffMs = estimatedTime.getTime() - currentTime.getTime();
     return Math.round(diffMs / 60000); // Minutes difference
   };
@@ -702,7 +724,7 @@ function OrderCard({
                               Cooking
                             </span>
                             <CookingTimer 
-                              firedAt={item.firedAt} 
+                              firedAt={String(item.firedAt)} 
                               cookSeconds={item.cookSeconds || item.menuItem?.prep_seconds || 300}
                             />
                             <button 
@@ -760,7 +782,7 @@ function OrderCard({
                         {/* Pending items (show when to start cooking) */}
                         {!item.status && item.menuItem?.prep_seconds && (
                           <StartTimer 
-                            orderCreatedAt={order.createdAt}
+                            orderCreatedAt={String(order.createdAt)}
                             cookSeconds={item.menuItem.prep_seconds}
                             longestCookItem={
                               orderDetails?.items?.reduce((longest, curr) => {
