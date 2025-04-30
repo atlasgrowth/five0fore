@@ -85,7 +85,7 @@ export interface IStorage {
 
 // Import database instance and helpers
 import { db, pool } from "./db";
-import { eq, asc, desc, and, or, isNotNull, isNull, lt, notInArray, ne } from "drizzle-orm";
+import { eq, asc, desc, and, or, isNotNull, isNull, lt, notInArray, ne, sql, inArray } from "drizzle-orm";
 
 // Implement the Database Storage
 export class DatabaseStorage implements IStorage {
@@ -349,6 +349,37 @@ export class DatabaseStorage implements IStorage {
       DEFAULT_COOK_SECONDS 
     } = await import('./constants');
     
+    // Performance optimization - cache the following instead of querying for each order
+    console.log("Performance Optimized getActiveOrders - Loading all bays and order items at once");
+    
+    // 1. Get all bays and index them by id for fast lookup
+    const allBays = await db.select().from(bays);
+    const bayMap = new Map(allBays.map(bay => [bay.id, bay]));
+    
+    // 2. Get count of order items per order
+    // This replaces individual "getOrderItems" calls with a single aggregation query
+    const orderItemCounts = await db
+      .select({
+        orderId: orderItems.orderId,
+        count: sql`count(*)`,
+        totalQuantity: sql`sum(${orderItems.quantity})`,
+        maxCookSeconds: sql`max(${orderItems.cookSeconds})`
+      })
+      .from(orderItems)
+      .groupBy(orderItems.orderId);
+    
+    // Create a map for faster lookups
+    const orderItemsMap = new Map(
+      orderItemCounts.map(row => [
+        row.orderId, 
+        { 
+          count: Number(row.count), 
+          totalQuantity: Number(row.totalQuantity || 0),
+          maxCookSeconds: Number(row.maxCookSeconds || DEFAULT_COOK_SECONDS)
+        }
+      ])
+    );
+    
     // Get ALL orders to display in ALL tabs - both active and closed/served
     const activeOrders = await db
       .select()
@@ -368,71 +399,67 @@ export class DatabaseStorage implements IStorage {
       loadFactorDamping: 0.5
     };
 
-    const summaries = await Promise.all(
-      activeOrders.map(async (order) => {
-        const bay = await this.getBayById(order.bayId);
-        const items = await this.getOrderItems(order.id);
+    // Process orders using the pre-loaded data
+    const summaries = activeOrders.map((order) => {
+      // Get the bay from our map instead of querying the database
+      const bay = bayMap.get(order.bayId);
+      
+      // Get items info from our pre-computed map
+      const itemsInfo = orderItemsMap.get(order.id) || { 
+        count: 0, 
+        totalQuantity: 0,
+        maxCookSeconds: DEFAULT_COOK_SECONDS
+      };
 
-        // Calculate how many minutes ago the order was created
-        const now = new Date();
-        const createdAt = new Date(order.createdAt);
-        const timeElapsed = Math.floor((now.getTime() - createdAt.getTime()) / 60000);
+      // Calculate how many minutes ago the order was created
+      const now = new Date();
+      const createdAt = new Date(order.createdAt);
+      const timeElapsed = Math.floor((now.getTime() - createdAt.getTime()) / 60000);
 
-        // Find the longest cook time among all items
-        let longestCookTime = 0;
-        for (const item of items) {
-          if (item.cookSeconds && item.cookSeconds > longestCookTime) {
-            longestCookTime = item.cookSeconds;
-          }
-        }
-        
-        // Use default if no cook times found
-        if (longestCookTime === 0) {
-          longestCookTime = DEFAULT_COOK_SECONDS;
-        }
+      // Use the pre-computed longest cook time
+      const longestCookTime = itemsInfo.maxCookSeconds || DEFAULT_COOK_SECONDS;
 
-        // Calculate attention level based on thresholds
-        const attentionLevel = calculateAttentionLevel(
-          order.estimatedCompletionTime,
-          settings.attentionThreshold,
-          settings.priorityThreshold,
-          settings.criticalThreshold
-        );
-        
-        // Calculate priority score for this order
-        const priority = calculatePriorityScore(
-          createdAt,
-          order.estimatedCompletionTime,
-          items.reduce((sum, item) => sum + (item.quantity || 0), 0),
-          longestCookTime,
-          settings.waitRatioWeight,
-          settings.orderAgeWeight,
-          settings.cookComplexityWeight
-        );
+      // Calculate attention level based on thresholds
+      const attentionLevel = calculateAttentionLevel(
+        order.estimatedCompletionTime,
+        settings.attentionThreshold,
+        settings.priorityThreshold,
+        settings.criticalThreshold
+      );
+      
+      // Calculate priority score for this order
+      const priority = calculatePriorityScore(
+        createdAt,
+        order.estimatedCompletionTime,
+        itemsInfo.totalQuantity,
+        longestCookTime,
+        settings.waitRatioWeight,
+        settings.orderAgeWeight,
+        settings.cookComplexityWeight
+      );
 
-        // For backward compatibility - map attention level to isDelayed
-        // Anything above NORMAL is considered "delayed" in the old system
-        const isDelayed = attentionLevel !== schema.AttentionLevel.NORMAL;
+      // For backward compatibility - map attention level to isDelayed
+      // Anything above NORMAL is considered "delayed" in the old system
+      const isDelayed = attentionLevel !== schema.AttentionLevel.NORMAL;
 
-        return {
-          id: order.id,
-          orderNumber: `#${order.id.substring(0, 6)}`, // Generate order number from ID
-          bayId: order.bayId,
-          bayNumber: bay?.number,
-          floor: bay?.floor || 0,
-          status: order.status,
-          createdAt: order.createdAt,
-          timeElapsed,
-          totalItems: items.reduce((sum, item) => sum + (item.quantity || 0), 0),
-          isDelayed,
-          attentionLevel, // New field for 3-tier attention system
-          priority, // Numerical priority score for sorting
-          estimatedCompletionTime: order.estimatedCompletionTime,
-          seatingType: bay?.type,
-          displayName: bay?.displayName
-        };
-      })
-    );
+      return {
+        id: order.id,
+        orderNumber: `#${order.id.substring(0, 6)}`, // Generate order number from ID
+        bayId: order.bayId,
+        bayNumber: bay?.number,
+        floor: bay?.floor || 0,
+        status: order.status,
+        createdAt: order.createdAt,
+        timeElapsed,
+        totalItems: itemsInfo.totalQuantity,
+        isDelayed,
+        attentionLevel, // New field for 3-tier attention system
+        priority, // Numerical priority score for sorting
+        estimatedCompletionTime: order.estimatedCompletionTime,
+        seatingType: bay?.type,
+        displayName: bay?.displayName
+      };
+    });
 
     // Sort by priority score (higher priority first)
     summaries.sort((a, b) => (b.priority || 0) - (a.priority || 0));
@@ -448,11 +475,51 @@ export class DatabaseStorage implements IStorage {
       DEFAULT_COOK_SECONDS 
     } = await import('./constants');
     
+    // Performance optimization - cache the following instead of querying for each order
+    console.log(`Performance Optimized getOrdersByStatus(${status}) - Loading all bays and order items at once`);
+    
+    // 1. Get all bays and index them by id for fast lookup
+    const allBays = await db.select().from(bays);
+    const bayMap = new Map(allBays.map(bay => [bay.id, bay]));
+    
+    // 2. Get only orders with the requested status
     const ordersWithStatus = await db
       .select()
       .from(orders)
       .where(eq(orders.status, status.toUpperCase()))
       .orderBy(asc(orders.createdAt));
+    
+    // Get IDs of all matching orders for efficient query
+    const orderIds = ordersWithStatus.map(order => order.id);
+    
+    if (orderIds.length === 0) {
+      return []; // No orders with this status, return empty array
+    }
+    
+    // 3. Get count of order items per order in a single query
+    // This replaces individual "getOrderItems" calls with a single aggregation query
+    const orderItemCounts = await db
+      .select({
+        orderId: orderItems.orderId,
+        count: sql`count(*)`,
+        totalQuantity: sql`sum(${orderItems.quantity})`,
+        maxCookSeconds: sql`max(${orderItems.cookSeconds})`
+      })
+      .from(orderItems)
+      .where(inArray(orderItems.orderId, orderIds))
+      .groupBy(orderItems.orderId);
+    
+    // Create a map for faster lookups
+    const orderItemsMap = new Map(
+      orderItemCounts.map(row => [
+        row.orderId, 
+        { 
+          count: Number(row.count), 
+          totalQuantity: Number(row.totalQuantity || 0),
+          maxCookSeconds: Number(row.maxCookSeconds || DEFAULT_COOK_SECONDS)
+        }
+      ])
+    );
 
     // Default settings (instead of querying the database for now)
     // This avoids the error with missing columns until we migrate the database
@@ -467,70 +534,66 @@ export class DatabaseStorage implements IStorage {
       loadFactorDamping: 0.5
     };
 
-    const summaries = await Promise.all(
-      ordersWithStatus.map(async (order) => {
-        const bay = await this.getBayById(order.bayId);
-        const items = await this.getOrderItems(order.id);
+    // Process orders using the pre-loaded data
+    const summaries = ordersWithStatus.map((order) => {
+      // Get the bay from our map instead of querying the database
+      const bay = bayMap.get(order.bayId);
+      
+      // Get items info from our pre-computed map
+      const itemsInfo = orderItemsMap.get(order.id) || { 
+        count: 0, 
+        totalQuantity: 0,
+        maxCookSeconds: DEFAULT_COOK_SECONDS
+      };
 
-        // Calculate how many minutes ago the order was created
-        const now = new Date();
-        const createdAt = new Date(order.createdAt);
-        const timeElapsed = Math.floor((now.getTime() - createdAt.getTime()) / 60000);
+      // Calculate how many minutes ago the order was created
+      const now = new Date();
+      const createdAt = new Date(order.createdAt);
+      const timeElapsed = Math.floor((now.getTime() - createdAt.getTime()) / 60000);
 
-        // Find the longest cook time among all items
-        let longestCookTime = 0;
-        for (const item of items) {
-          if (item.cookSeconds && item.cookSeconds > longestCookTime) {
-            longestCookTime = item.cookSeconds;
-          }
-        }
-        
-        // Use default if no cook times found
-        if (longestCookTime === 0) {
-          longestCookTime = DEFAULT_COOK_SECONDS;
-        }
+      // Use the pre-computed longest cook time
+      const longestCookTime = itemsInfo.maxCookSeconds || DEFAULT_COOK_SECONDS;
 
-        // Calculate attention level based on thresholds
-        const attentionLevel = calculateAttentionLevel(
-          order.estimatedCompletionTime,
-          settings.attentionThreshold,
-          settings.priorityThreshold,
-          settings.criticalThreshold
-        );
-        
-        // Calculate priority score for this order
-        const priority = calculatePriorityScore(
-          createdAt,
-          order.estimatedCompletionTime,
-          items.reduce((sum, item) => sum + (item.quantity || 0), 0),
-          longestCookTime,
-          settings.waitRatioWeight,
-          settings.orderAgeWeight,
-          settings.cookComplexityWeight
-        );
+      // Calculate attention level based on thresholds
+      const attentionLevel = calculateAttentionLevel(
+        order.estimatedCompletionTime,
+        settings.attentionThreshold,
+        settings.priorityThreshold,
+        settings.criticalThreshold
+      );
+      
+      // Calculate priority score for this order
+      const priority = calculatePriorityScore(
+        createdAt,
+        order.estimatedCompletionTime,
+        itemsInfo.totalQuantity,
+        longestCookTime,
+        settings.waitRatioWeight,
+        settings.orderAgeWeight,
+        settings.cookComplexityWeight
+      );
 
-        // For backward compatibility - map attention level to isDelayed
-        const isDelayed = attentionLevel !== schema.AttentionLevel.NORMAL;
+      // For backward compatibility - map attention level to isDelayed
+      const isDelayed = attentionLevel !== schema.AttentionLevel.NORMAL;
 
-        return {
-          id: order.id,
-          orderNumber: `#${order.id.substring(0, 6)}`, // Generate order number from ID
-          bayId: order.bayId,
-          bayNumber: bay?.number,
-          floor: bay?.floor || 0,
-          status: order.status,
-          createdAt: order.createdAt,
-          timeElapsed,
-          totalItems: items.reduce((sum, item) => sum + (item.quantity || 0), 0),
-          isDelayed,
-          attentionLevel, // New field for 3-tier attention system
-          priority, // Numerical priority score for sorting
-          estimatedCompletionTime: order.estimatedCompletionTime,
-          seatingType: bay?.type,
-          displayName: bay?.displayName
-        };
-      })
-    );
+      return {
+        id: order.id,
+        orderNumber: `#${order.id.substring(0, 6)}`, // Generate order number from ID
+        bayId: order.bayId,
+        bayNumber: bay?.number,
+        floor: bay?.floor || 0,
+        status: order.status,
+        createdAt: order.createdAt,
+        timeElapsed,
+        totalItems: itemsInfo.totalQuantity,
+        isDelayed,
+        attentionLevel, // New field for 3-tier attention system
+        priority, // Numerical priority score for sorting
+        estimatedCompletionTime: order.estimatedCompletionTime,
+        seatingType: bay?.type,
+        displayName: bay?.displayName
+      };
+    });
 
     // Sort by priority score (higher priority first)
     summaries.sort((a, b) => (b.priority || 0) - (a.priority || 0));
