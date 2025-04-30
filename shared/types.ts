@@ -9,7 +9,7 @@ export enum OrderItemStatus {
   PLATING = "PLATING",
   READY = "READY",
   DELIVERED = "DELIVERED",
-  SERVED = "DELIVERED", // Alias SERVED to DELIVERED for backward compatibility
+  SERVED = "SERVED", // Keep original value for backward compatibility
   VOIDED = "VOIDED"
 }
 

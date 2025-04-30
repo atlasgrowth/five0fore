@@ -160,14 +160,12 @@ export function startKitchenTimers() {
   }
   statusSyncTimerId = setInterval(synchronizeBayStatus, 3000);
   
-  // Order time recalculation - run every 60 seconds instead of 10 to reduce server load
+  // Temporarily disable automatic order time recalculation as it's causing performance issues
+  // We'll let users manually update times as needed
   if (timeRecalcTimerId) {
     clearInterval(timeRecalcTimerId);
+    timeRecalcTimerId = null;
   }
-  timeRecalcTimerId = setInterval(recalculateAllOrderTimes, 60000);
-  
-  // No need to run immediate recalculation on startup as it's causing performance issues
-  // with the large number of orders
 }
 
 /**
