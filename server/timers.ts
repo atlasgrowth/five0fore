@@ -8,6 +8,7 @@ import { eq, and, inArray, notInArray, sql } from 'drizzle-orm';
 import { broadcastUpdate } from './ws';
 import { storage } from './storage';
 import { toBayDTO, toOrderDTO } from './dto';
+import { OrderItemStatus, OrderStatus } from '@shared/types';
 import { 
   calculateTotalOrderTime, 
   calculateOrderReadyTime,
@@ -159,7 +160,9 @@ export async function updateOrderEstimatedCompletionTime(orderId: string) {
     // Calculate progress factor based on completed items
     const totalItems = items.length;
     const completedItems = items.filter(item => 
-      item.status === 'READY' || item.status === 'DELIVERED' || item.status === 'SERVED'
+      item.status === OrderItemStatus.READY || 
+      item.status === OrderItemStatus.DELIVERED || 
+      item.status === 'SERVED' // Keep string version for backward compatibility
     ).length;
     
     // Progress from 0.0 (no items done) to 1.0 (all items done)
@@ -169,7 +172,7 @@ export async function updateOrderEstimatedCompletionTime(orderId: string) {
     let longestRemainingCookTime = 0;
     
     items.forEach(item => {
-      if (item.status === 'COOKING' && item.firedAt) {
+      if (item.status === OrderItemStatus.COOKING && item.firedAt) {
         const cookTime = item.cookSeconds || item.menuItem?.prep_seconds || DEFAULT_COOK_SECONDS;
         const elapsedSeconds = Math.floor((new Date().getTime() - new Date(item.firedAt).getTime()) / 1000);
         const remainingSeconds = Math.max(0, cookTime - elapsedSeconds);
@@ -177,7 +180,7 @@ export async function updateOrderEstimatedCompletionTime(orderId: string) {
         if (remainingSeconds > longestRemainingCookTime) {
           longestRemainingCookTime = remainingSeconds;
         }
-      } else if (item.status === 'NEW') {
+      } else if (item.status === OrderItemStatus.NEW) {
         // For new items, consider their full cook time
         const cookTime = item.cookSeconds || item.menuItem?.prep_seconds || DEFAULT_COOK_SECONDS;
         if (cookTime > longestRemainingCookTime) {
@@ -186,8 +189,9 @@ export async function updateOrderEstimatedCompletionTime(orderId: string) {
       }
     });
     
-    // Base completion time on the original created time
-    let estimatedCompletionTime = order.createdAt;
+    // Always use current time as the base for calculation, not the original creation time
+    // This ensures that for orders already in progress, we're projecting from now
+    let estimatedCompletionTime = new Date();
     
     if (progressFactor < 1.0) {
       // Apply damping to load factor (50% damping by default)
@@ -206,12 +210,12 @@ export async function updateOrderEstimatedCompletionTime(orderId: string) {
       // Total remaining seconds
       const totalRemainingSeconds = remainingPrepBuffer + adjustedCookTime + remainingExpoBuffer;
       
-      // Calculate the new estimated completion time
-      estimatedCompletionTime = new Date();
+      // Add the calculated remaining time to the current time
       estimatedCompletionTime.setSeconds(estimatedCompletionTime.getSeconds() + totalRemainingSeconds);
-    } else {
-      // All items complete - use current time
-      estimatedCompletionTime = new Date();
+      
+      console.log(`Order ${orderId} - Estimated completion in ${totalRemainingSeconds} seconds`);
+      console.log(`Progress: ${progressFactor * 100}%, Load factor: ${loadFactor}, Adjusted load: ${adjustedLoadFactor}`);
+      console.log(`Remaining prep: ${remainingPrepBuffer}s, Cook time: ${adjustedCookTime}s, Expo: ${remainingExpoBuffer}s`);
     }
     
     // Update the order in the database
