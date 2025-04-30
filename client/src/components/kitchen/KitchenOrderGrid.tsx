@@ -1,7 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { TimerPill } from "@/components/ui/timer-badge";
 import { TimerDisplay } from "@/components/ui/timer-display";
-import { CountdownTimer } from "@/components/ui/countdown-timer";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -552,14 +551,12 @@ function OrderCard({
             </p>
           </div>
           <div className="flex flex-col items-end">
-            {/* Show countdown to estimated completion time */}
+            {/* Show estimated completion time */}
             <div className="text-sm font-medium">
               {order.estimatedCompletionTime ? (
                 <div className="flex flex-col items-end">
-                  <CountdownTimer estimatedCompletionTime={order.estimatedCompletionTime} />
-                  <span className="text-xs text-neutral-500 mt-1">
-                    {new Date(order.estimatedCompletionTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
-                  </span>
+                  <span className="text-xs text-neutral-500">Est. Completion:</span>
+                  <span className="font-medium">{new Date(order.estimatedCompletionTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
                 </div>
               ) : (
                 <TimerDisplay createdAt={order.createdAt} />
