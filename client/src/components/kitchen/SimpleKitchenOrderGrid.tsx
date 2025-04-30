@@ -18,6 +18,14 @@ function StartTimer({
 }) {
   const [timeToStart, setTimeToStart] = useState<number | null>(null);
   const [isTimeToStart, setIsTimeToStart] = useState<boolean>(false);
+  const [longestCookTime, setLongestCookTime] = useState<number>(0);
+  
+  useEffect(() => {
+    // Find the actual longest cook time in the order
+    if (longestCookItem) {
+      setLongestCookTime(cookSeconds);
+    }
+  }, [longestCookItem, cookSeconds]);
   
   useEffect(() => {
     const calculateStartTime = () => {
@@ -34,10 +42,9 @@ function StartTimer({
       const elapsedMs = currentTime - orderTime;
       
       // Time to wait before starting this item
-      // This will be (longest cook time - this item's cook time)
-      // For simplicity, we're using a fixed buffer of 5 minutes (300 seconds) to represent the longest cook time
-      const longestItemTime = 300; // 5 minutes
-      const waitTimeMs = (longestItemTime - cookSeconds) * 1000;
+      // We want items to finish at approximately the same time
+      // So start shorter cooking items after: (longest cook time - this item's cook time)
+      const waitTimeMs = Math.max(0, (longestCookTime - cookSeconds) * 1000);
       
       // If it's already time to start (elapsed time > wait time)
       if (elapsedMs >= waitTimeMs) {
@@ -55,7 +62,7 @@ function StartTimer({
     const timer = setInterval(calculateStartTime, 1000);
     
     return () => clearInterval(timer);
-  }, [orderCreatedAt, cookSeconds, longestCookItem]);
+  }, [orderCreatedAt, cookSeconds, longestCookItem, longestCookTime]);
   
   // Format time in minutes and seconds
   const formatTime = (seconds: number): string => {
@@ -66,12 +73,29 @@ function StartTimer({
   
   if (isTimeToStart) {
     return (
-      <span className="ml-2 text-xs font-medium bg-red-100 text-red-800 px-2 py-0.5 rounded-full flex items-center">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        Start now!
-      </span>
+      <div className="ml-2 flex items-center">
+        <span className="text-xs font-medium bg-red-100 text-red-800 px-2 py-0.5 rounded-full flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Start now!
+        </span>
+        <button 
+          className="ml-2 p-1 text-xs bg-yellow-100 hover:bg-yellow-200 text-yellow-800 rounded-full flex items-center"
+          title="Start cooking"
+          onClick={(e) => {
+            e.stopPropagation();
+            const checkbox = e.currentTarget.closest('div[data-item-id]')?.querySelector('input[type="checkbox"]') as HTMLInputElement;
+            if (checkbox) {
+              checkbox.click();
+            }
+          }}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
     );
   }
   
@@ -412,7 +436,12 @@ function OrderCard({
             </div>
           ) : orderDetails?.items && orderDetails.items.length > 0 ? (
             [...orderDetails.items]
+              // Sort first by status, then by cookSeconds (longest first)
               .sort((a, b) => {
+                // Helper function to get cook seconds
+                const getCookSeconds = (item: any) => item.cookSeconds || item.menuItem?.prep_seconds || 0;
+                
+                // First group by status
                 const statusPriority: Record<string, number> = { 
                   [OrderItemStatus.NEW]: 0, 
                   [OrderItemStatus.COOKING]: 1, 
@@ -422,11 +451,23 @@ function OrderCard({
                 };
                 const aStatus = a.status || "PENDING";
                 const bStatus = b.status || "PENDING";
-                return (statusPriority[aStatus] || 0) - (statusPriority[bStatus] || 0);
+                
+                // If status is different, sort by status
+                if (aStatus !== bStatus) {
+                  return (statusPriority[aStatus] || 0) - (statusPriority[bStatus] || 0);
+                }
+                
+                // If both are pending (NEW or null status), sort by cook time (longest first)
+                if (!a.status && !b.status) {
+                  return getCookSeconds(b) - getCookSeconds(a);
+                }
+                
+                return 0;
               })
               .map((item) => (
                 <div 
-                  key={item.id} 
+                  key={item.id}
+                  data-item-id={item.id}
                   className={cn(
                     "flex justify-between p-2 mb-2 border-b",
                     item.status === OrderItemStatus.COOKING && "border-l-2 border-l-yellow-500",
