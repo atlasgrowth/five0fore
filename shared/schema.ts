@@ -119,6 +119,7 @@ export const orders = pgTable("orders", {
   // Removed specialInstructions field - special instructions should only be at the item level
   orderType: text("order_type").notNull().default("customer"), // customer, server
   estimatedCompletionTime: timestamp("estimated_completion_time"), // New field for P2
+  closedAt: timestamp("closed_at"), // When the order was marked as closed
 });
 
 export const insertOrderSchema = createInsertSchema(orders).pick({

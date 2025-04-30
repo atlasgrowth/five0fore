@@ -569,8 +569,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const orderId = req.params.id;
       
-      // Update the order status directly to CLOSED
-      const updatedOrder = await storage.updateOrderStatus(orderId, OrderStatus.CLOSED);
+      // Use the new markOrderClosed method which properly sets the closedAt timestamp
+      // and handles bay status updates
+      const updatedOrder = await storage.markOrderClosed(orderId);
       
       if (!updatedOrder) {
         return res.status(404).json({ message: 'Order not found' });
@@ -579,12 +580,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get full order details
       const fullOrder = await storage.getOrderWithItems(orderId);
       
-      // Broadcast order update to connected clients
+      // Broadcast a special ORDER_CLOSED message type to indicate this is a closure
+      // (not just a regular order update)
+      const orderClosedMessage = {
+        type: 'ORDER_CLOSED',
+        data: toOrderDTO(updatedOrder)
+      };
+      
+      // Send to all connected clients
+      wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify(orderClosedMessage));
+        }
+      });
+      
+      // Also broadcast to update active orders list for all clients
       const updatedOrders = await storage.getActiveOrders();
       broadcastUpdate('ordersUpdate', updatedOrders);
       
+      // Additionally broadcast closed orders for the CLOSED tab
+      // This is key to fixing the issue with closed orders not appearing
+      const closedOrders = await storage.getOrdersByStatus('CLOSED');
+      broadcastUpdate('closedOrdersUpdate', closedOrders);
+      
       if (fullOrder) {
-        // Create order update message
+        // Create order update message for the specific bay
         const orderUpdatedMessage: OrderUpdatedMessage = {
           type: 'order_updated',
           data: {
@@ -595,20 +615,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             estimatedCompletionTime: fullOrder.estimatedCompletionTime 
               ? new Date(fullOrder.estimatedCompletionTime).toISOString() 
               : null,
-            completionTime: new Date().toISOString(),
+            completionTime: updatedOrder.closedAt 
+              ? new Date(updatedOrder.closedAt).toISOString() 
+              : new Date().toISOString(),
             isDelayed: false
           }
         };
         
         // Send update to the specific bay
         sendBayUpdate(updatedOrder.bayId, 'order_updated', orderUpdatedMessage.data);
-        
-        // Don't directly set bay status - let updateOrderStatus handle it
-        // This ensures other active orders on the bay are considered
       }
       
       // Return the updated order
-      res.json(updatedOrder);
+      res.json(toOrderDTO(updatedOrder));
     } catch (error) {
       console.error('Error closing order:', error);
       res.status(500).json({ message: 'Failed to close order' });
