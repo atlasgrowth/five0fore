@@ -334,11 +334,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveOrders(): Promise<OrderSummary[]> {
+    // Import helper functions for attention levels and priority calculation
+    const { 
+      calculateAttentionLevel, 
+      calculatePriorityScore, 
+      DEFAULT_COOK_SECONDS 
+    } = await import('./constants');
+    
     // Get ALL orders to display in ALL tabs - both active and closed/served
     const activeOrders = await db
       .select()
       .from(orders)
       .orderBy(asc(orders.createdAt));
+
+    // Get kitchen settings for threshold calculations
+    const kitchenSettingsResult = await db
+      .select()
+      .from(kitchenSettings)
+      .limit(1);
+    
+    // Use default values if no settings found
+    const settings = kitchenSettingsResult[0] || {
+      attentionThreshold: 0.8,
+      priorityThreshold: 1.0, 
+      criticalThreshold: 1.25,
+      waitRatioWeight: 2.0,
+      orderAgeWeight: 1.0,
+      cookComplexityWeight: 0.5
+    };
 
     const summaries = await Promise.all(
       activeOrders.map(async (order) => {
@@ -350,9 +373,41 @@ export class DatabaseStorage implements IStorage {
         const createdAt = new Date(order.createdAt);
         const timeElapsed = Math.floor((now.getTime() - createdAt.getTime()) / 60000);
 
-        // Determine if the order is delayed
-        // For simplicity, we'll consider an order delayed if it's been more than 15 minutes since creation
-        const isDelayed = timeElapsed > 15;
+        // Find the longest cook time among all items
+        let longestCookTime = 0;
+        for (const item of items) {
+          if (item.cookSeconds && item.cookSeconds > longestCookTime) {
+            longestCookTime = item.cookSeconds;
+          }
+        }
+        
+        // Use default if no cook times found
+        if (longestCookTime === 0) {
+          longestCookTime = DEFAULT_COOK_SECONDS;
+        }
+
+        // Calculate attention level based on thresholds
+        const attentionLevel = calculateAttentionLevel(
+          order.estimatedCompletionTime,
+          settings.attentionThreshold,
+          settings.priorityThreshold,
+          settings.criticalThreshold
+        );
+        
+        // Calculate priority score for this order
+        const priority = calculatePriorityScore(
+          createdAt,
+          order.estimatedCompletionTime,
+          items.reduce((sum, item) => sum + (item.quantity || 0), 0),
+          longestCookTime,
+          settings.waitRatioWeight,
+          settings.orderAgeWeight,
+          settings.cookComplexityWeight
+        );
+
+        // For backward compatibility - map attention level to isDelayed
+        // Anything above NORMAL is considered "delayed" in the old system
+        const isDelayed = attentionLevel !== schema.AttentionLevel.NORMAL;
 
         return {
           id: order.id,
@@ -365,19 +420,50 @@ export class DatabaseStorage implements IStorage {
           timeElapsed,
           totalItems: items.reduce((sum, item) => sum + (item.quantity || 0), 0),
           isDelayed,
+          attentionLevel, // New field for 3-tier attention system
+          priority, // Numerical priority score for sorting
+          estimatedCompletionTime: order.estimatedCompletionTime,
+          seatingType: bay?.type,
+          displayName: bay?.displayName
         };
       })
     );
 
+    // Sort by priority score (higher priority first)
+    summaries.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    
     return summaries;
   }
 
   async getOrdersByStatus(status: string): Promise<OrderSummary[]> {
+    // Import helper functions for attention levels and priority calculation
+    const { 
+      calculateAttentionLevel, 
+      calculatePriorityScore, 
+      DEFAULT_COOK_SECONDS 
+    } = await import('./constants');
+    
     const ordersWithStatus = await db
       .select()
       .from(orders)
       .where(eq(orders.status, status.toUpperCase()))
       .orderBy(asc(orders.createdAt));
+
+    // Get kitchen settings for threshold calculations
+    const kitchenSettingsResult = await db
+      .select()
+      .from(kitchenSettings)
+      .limit(1);
+    
+    // Use default values if no settings found
+    const settings = kitchenSettingsResult[0] || {
+      attentionThreshold: 0.8,
+      priorityThreshold: 1.0, 
+      criticalThreshold: 1.25,
+      waitRatioWeight: 2.0,
+      orderAgeWeight: 1.0,
+      cookComplexityWeight: 0.5
+    };
 
     const summaries = await Promise.all(
       ordersWithStatus.map(async (order) => {
@@ -389,8 +475,40 @@ export class DatabaseStorage implements IStorage {
         const createdAt = new Date(order.createdAt);
         const timeElapsed = Math.floor((now.getTime() - createdAt.getTime()) / 60000);
 
-        // Determine if the order is delayed (assuming a 15-minute threshold)
-        const isDelayed = timeElapsed > 15;
+        // Find the longest cook time among all items
+        let longestCookTime = 0;
+        for (const item of items) {
+          if (item.cookSeconds && item.cookSeconds > longestCookTime) {
+            longestCookTime = item.cookSeconds;
+          }
+        }
+        
+        // Use default if no cook times found
+        if (longestCookTime === 0) {
+          longestCookTime = DEFAULT_COOK_SECONDS;
+        }
+
+        // Calculate attention level based on thresholds
+        const attentionLevel = calculateAttentionLevel(
+          order.estimatedCompletionTime,
+          settings.attentionThreshold,
+          settings.priorityThreshold,
+          settings.criticalThreshold
+        );
+        
+        // Calculate priority score for this order
+        const priority = calculatePriorityScore(
+          createdAt,
+          order.estimatedCompletionTime,
+          items.reduce((sum, item) => sum + (item.quantity || 0), 0),
+          longestCookTime,
+          settings.waitRatioWeight,
+          settings.orderAgeWeight,
+          settings.cookComplexityWeight
+        );
+
+        // For backward compatibility - map attention level to isDelayed
+        const isDelayed = attentionLevel !== schema.AttentionLevel.NORMAL;
 
         return {
           id: order.id,
@@ -403,10 +521,18 @@ export class DatabaseStorage implements IStorage {
           timeElapsed,
           totalItems: items.reduce((sum, item) => sum + (item.quantity || 0), 0),
           isDelayed,
+          attentionLevel, // New field for 3-tier attention system
+          priority, // Numerical priority score for sorting
+          estimatedCompletionTime: order.estimatedCompletionTime,
+          seatingType: bay?.type,
+          displayName: bay?.displayName
         };
       })
     );
 
+    // Sort by priority score (higher priority first)
+    summaries.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    
     return summaries;
   }
 
