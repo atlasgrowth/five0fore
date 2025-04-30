@@ -927,32 +927,65 @@ export class DatabaseStorage implements IStorage {
     // In a production app, you'd typically have migrations and seed scripts
     console.log("Database already initialized!");
   }
-  async recalcBayStatus(bayId: string): Promise<void> {
+  async recalcBayStatus(bayId: number): Promise<void> {
     // Import the WebSocket functionality dynamically to avoid circular imports
     const { broadcastUpdate } = await import('./ws');
     
-    const rows = await db.select({ status: orderItems.status })
-       .from(orderItems)
-       .leftJoin(orders, eq(orders.id, orderItems.orderId))
-       .where(and(eq(orders.bayId, bayId),
-                  notInArray(orders.status, ["CLOSED", "CANCELLED"])));
-
-    const s = rows.map(r => r.status);
-    let bayStatus: "AVAILABLE" | "NEW" | "COOKING" | "PLATING" | "READY" = "AVAILABLE";
-    if (s.includes("NEW")) bayStatus = "NEW";
-    else if (s.includes("COOKING")) bayStatus = "COOKING";
-    else if (s.includes("PLATING")) bayStatus = "PLATING";
-    else if (s.length && s.every(x => x === "READY")) bayStatus = "READY";
-
-    await db.update(bays).set({ status: bayStatus }).where(eq(bays.id, bayId));
-    const bay = await db.query.bays.findFirst({ where: eq(bays.id, bayId) });
+    console.log(`Recalculating status for bay ${bayId}...`);
     
-    if (bay) {
-      // Broadcast the bay update to all clients with the correct WebSocket message format
-      broadcastUpdate('bay_updated', { bay: toBayDTO(bay) });
-      console.log(`Broadcasted bay update for bay ${bayId}, new status: ${bayStatus}`);
-    } else {
-      console.error(`Could not find bay with ID ${bayId} to broadcast update`);
+    try {
+      // Make sure we're using a number for bayId since it's stored as a number in the database
+      const bayIdNum = Number(bayId);
+      
+      const rows = await db.select({ status: orderItems.status })
+         .from(orderItems)
+         .leftJoin(orders, eq(orders.id, orderItems.orderId))
+         .where(and(eq(orders.bayId, bayIdNum),
+                    notInArray(orders.status, ["CLOSED", "CANCELLED"])));
+
+      console.log(`Found ${rows.length} active order items for bay ${bayId}`);
+      
+      const s = rows.map(r => r.status);
+      let bayStatus = "empty"; // Default for no orders - use lowercase to match client expectations
+      
+      // Now using proper case handling and case-consistent status values
+      if (s.some(status => status?.toLowerCase() === "new")) {
+        bayStatus = "new";
+      } else if (s.some(status => status?.toLowerCase() === "cooking")) {
+        bayStatus = "cooking";
+      } else if (s.some(status => status?.toLowerCase() === "plating")) {
+        bayStatus = "plating";
+      } else if (s.length > 0 && s.every(status => status?.toLowerCase() === "ready")) {
+        bayStatus = "ready";
+      } else if (s.length > 0 && s.every(status => status?.toLowerCase() === "served")) {
+        bayStatus = "served";
+      }
+
+      console.log(`Setting bay ${bayId} status to: ${bayStatus} based on items:`, s);
+      
+      // Update the bay status
+      await db.update(bays).set({ status: bayStatus }).where(eq(bays.id, bayIdNum));
+      
+      // Get the updated bay to send in the broadcast
+      const bay = await db.query.bays.findFirst({ where: eq(bays.id, bayIdNum) });
+      
+      if (bay) {
+        // Broadcast the bay update to all clients with the correct WebSocket message format
+        console.log(`Broadcasting bay update for bay ${bayId}, new status: ${bayStatus}`);
+        
+        // Get active orders for this bay to include in the update
+        const bayOrders = await this.getOrdersByBayId(bayIdNum);
+        
+        broadcastUpdate('bay_updated', { 
+          bay: toBayDTO(bay),
+          orders: bayOrders.map(toOrderDTO),
+          status: bay.status
+        });
+      } else {
+        console.error(`Could not find bay with ID ${bayId} to broadcast update`);
+      }
+    } catch (error) {
+      console.error(`Error recalculating bay status for bay ${bayId}:`, error);
     }
   }
   async markOrderServed(orderId: string) {
