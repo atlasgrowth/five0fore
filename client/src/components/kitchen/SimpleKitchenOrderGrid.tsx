@@ -1103,24 +1103,80 @@ function OrderItems({
           }
         };
 
-        // "Next up" badge for NEW items
-        const getNextUpBadge = () => {
+        // "Next up" badge and Timer for NEW items
+        const getStartCookingInfo = () => {
           if (item.status !== OrderItemStatus.NEW) return null;
 
+          // Calculate when to start cooking based on order creation time and estimated completion
+          const shouldStartShowTimer = orderDetails.estimatedCompletionTime && orderDetails.createdAt;
+          const totalCookSeconds = item.cookSeconds || item.menuItem?.prep_seconds || 0;
+          
+          // Find if this is the next item to cook
           const pendingItems = orderDetails.items.filter(i => i.status === OrderItemStatus.NEW);
           const longestCookItem = pendingItems.sort((a, b) => 
             (b.cookSeconds || b.menuItem?.prep_seconds || 0) - 
             (a.cookSeconds || a.menuItem?.prep_seconds || 0)
           )[0];
-
-          if (longestCookItem && longestCookItem.id === item.id) {
+          
+          const isNextUp = longestCookItem && longestCookItem.id === item.id;
+          
+          if (shouldStartShowTimer && orderDetails.estimatedCompletionTime && orderDetails.createdAt) {
+            // If we have an estimated completion time, calculate when to start cooking
+            const createdAt = new Date(orderDetails.createdAt).getTime();
+            const completionTime = new Date(orderDetails.estimatedCompletionTime).getTime();
+            const totalOrderTimeMs = completionTime - createdAt;
+            
+            // We should start cooking this item = estimatedCompletionTime - cookTime
+            const shouldStartCookingTime = new Date(completionTime - (totalCookSeconds * 1000));
+            const now = new Date();
+            
+            // Time until we should start cooking
+            const msUntilCookStart = shouldStartCookingTime.getTime() - now.getTime();
+            const secondsUntilCookStart = Math.round(msUntilCookStart / 1000);
+            
+            if (secondsUntilCookStart <= 0) {
+              // Should start cooking now!
+              return (
+                <div className="ml-0 mb-2 flex items-center gap-2">
+                  {isNextUp && (
+                    <div className="bg-blue-500 text-white px-3 py-1 text-sm font-bold rounded shadow-sm inline-block">
+                      NEXT UP
+                    </div>
+                  )}
+                  <div className="bg-red-500 text-white px-3 py-1 text-sm font-bold rounded shadow-sm inline-block animate-pulse">
+                    START NOW
+                  </div>
+                </div>
+              );
+            } else if (secondsUntilCookStart < 300) { // Less than 5 minutes
+              // Show countdown to start cooking
+              const minutesUntilCookStart = Math.floor(secondsUntilCookStart / 60);
+              const remainingSeconds = secondsUntilCookStart % 60;
+              
+              return (
+                <div className="ml-0 mb-2 flex items-center gap-2">
+                  {isNextUp && (
+                    <div className="bg-blue-500 text-white px-3 py-1 text-sm font-bold rounded shadow-sm inline-block">
+                      NEXT UP
+                    </div>
+                  )}
+                  <div className="bg-yellow-500 text-white px-3 py-1 text-sm font-bold rounded shadow-sm inline-block">
+                    Start in: {minutesUntilCookStart}:{remainingSeconds.toString().padStart(2, '0')}
+                  </div>
+                </div>
+              );
+            }
+          }
+          
+          // If we don't have timing info or it's too far in the future, just show NEXT UP if applicable
+          if (isNextUp) {
             return (
               <div className="ml-0 mb-2 bg-blue-500 text-white px-3 py-1 text-sm font-bold rounded shadow-sm inline-block">
                 NEXT UP
               </div>
             );
           }
-
+          
           return null;
         };
 
@@ -1129,42 +1185,42 @@ function OrderItems({
             key={item.id}
             className={cn("p-3 rounded-md relative", itemStyle, borderAccent)}
           >
-            {/* Next up badge */}
-            {getNextUpBadge()}
+            {/* Next up badge and "start cooking" timer */}
+            {getStartCookingInfo()}
 
             {/* Cooking timer badge */}
             {getCookingTimerDisplay()}
 
             <div className="flex items-start mt-1">
-              {/* Status checkbox */}
+              {/* Status checkbox - simplified with distinct colors only */}
               <div className="mr-2 flex-shrink-0 mt-0.5">
                 {item.status === OrderItemStatus.DELIVERED ? (
-                  <div className="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-purple-600" viewBox="0 0 20 20" fill="currentColor">
+                  <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center border-2 border-purple-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-purple-600" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   </div>
                 ) : item.status === OrderItemStatus.READY ? (
                   <Checkbox
-                    className="w-5 h-5 data-[state=checked]:bg-green-500 border-green-300 bg-green-100"
+                    className="w-6 h-6 data-[state=checked]:bg-green-500 border-2 border-green-500 bg-green-100"
                     checked={true} 
                     onCheckedChange={(checked) => toggleItemCompletion(item.id, checked as boolean, item.status || undefined)}
                   />
                 ) : item.status === OrderItemStatus.PLATING ? (
                   <Checkbox
-                    className="w-5 h-5 data-[state=checked]:bg-green-500 border-purple-300 bg-purple-100"
+                    className="w-6 h-6 data-[state=checked]:bg-green-500 border-2 border-purple-500 bg-purple-100"
                     checked={false}
                     onCheckedChange={(checked) => toggleItemCompletion(item.id, checked as boolean, item.status || undefined)}
                   />
                 ) : item.status === OrderItemStatus.COOKING ? (
                   <Checkbox
-                    className="w-5 h-5 data-[state=checked]:bg-purple-500 border-amber-300 bg-amber-100"
+                    className="w-6 h-6 data-[state=checked]:bg-purple-500 border-2 border-amber-500 bg-amber-100"
                     checked={false}
                     onCheckedChange={(checked) => toggleItemCompletion(item.id, checked as boolean, item.status || undefined)}
                   />
                 ) : (
                   <Checkbox
-                    className="w-5 h-5 data-[state=checked]:bg-amber-500 border-blue-300 bg-blue-100"
+                    className="w-6 h-6 data-[state=checked]:bg-amber-500 border-2 border-blue-500 bg-blue-100"
                     checked={false}
                     onCheckedChange={(checked) => toggleItemCompletion(item.id, checked as boolean, item.status || undefined)}
                   />
@@ -1261,10 +1317,19 @@ function OrderProgress({ orderId }: { orderId: string }) {
     i.status === OrderItemStatus.READY || i.status === OrderItemStatus.DELIVERED
   ).length;
 
+  // Check if order is delayed by comparing estimated vs actual times
+  const isDelayed = () => {
+    if (!orderDetails.estimatedCompletionTime) return false;
+    
+    const estimatedTime = new Date(orderDetails.estimatedCompletionTime).getTime();
+    const now = new Date().getTime();
+    return now > estimatedTime && orderDetails.status !== OrderStatus.READY;
+  };
+
   return (
     <span className={cn(
       "font-medium",
-      orderDetails.isDelayed ? "text-red-600" : "text-neutral-600"
+      isDelayed() ? "text-red-600" : "text-neutral-600"
     )}>
       {orderDetails.status === OrderStatus.READY ? (
         <span className="flex items-center text-green-600">
