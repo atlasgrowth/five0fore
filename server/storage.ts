@@ -72,7 +72,7 @@ export interface IStorage {
 
   // Initialize with sample data
   initializeData(): Promise<void>;
-  recalcBayStatus(bayId: string): Promise<void>;
+  recalcBayStatus(bayId: number): Promise<void>;
 }
 
 // Import database instance and helpers
