@@ -89,9 +89,9 @@ export function calculateOrderReadyTime(
  */
 export function calculateAttentionLevel(
   estimatedCompletionTime: Date | string | null,
-  attentionThreshold: number = 0.9,  // Increased from 80% to 90% - less sensitivity
-  priorityThreshold: number = 1.2,   // Increased from 100% to 120% - more tolerance
-  criticalThreshold: number = 1.5    // Increased from 125% to 150% - much rarer critical status
+  attentionThreshold: number = 0.9,  // 90% - less sensitivity
+  priorityThreshold: number = 1.2,   // 120% - more tolerance
+  criticalThreshold: number = 1.5    // 150% - much rarer critical status
 ): AttentionLevel {
   if (!estimatedCompletionTime) {
     return AttentionLevel.NORMAL;
@@ -102,27 +102,46 @@ export function calculateAttentionLevel(
     : estimatedCompletionTime;
     
   const now = new Date();
-  const orderCreatedAt = new Date(estCompleteTime);
-  orderCreatedAt.setMinutes(orderCreatedAt.getMinutes() - 10); // Assuming 10 min total time as rough estimate
   
-  // Calculate how much of the estimated time has elapsed (as a percentage)
-  const totalEstimatedSeconds = (estCompleteTime.getTime() - orderCreatedAt.getTime()) / 1000;
-  const elapsedSeconds = (now.getTime() - orderCreatedAt.getTime()) / 1000;
-  const percentComplete = elapsedSeconds / totalEstimatedSeconds;
+  // Simple approach: just compare current time to estimated completion time
+  // If we're past estimated time, it's delayed
+  const timeRemainingMs = estCompleteTime.getTime() - now.getTime();
   
-  // Simple log to debug the calculation (can be removed later)
-  console.log(`Order completion: ${Math.round(percentComplete * 100)}% of estimated time`);
+  // Convert to minutes for more intuitive understanding
+  const timeRemainingMinutes = timeRemainingMs / (1000 * 60);
   
-  // Determine attention level based on percentage of completion with higher thresholds
-  if (percentComplete >= criticalThreshold) {
-    return AttentionLevel.CRITICAL;
-  } else if (percentComplete >= priorityThreshold) {
-    return AttentionLevel.PRIORITY;
-  } else if (percentComplete >= attentionThreshold) {
-    return AttentionLevel.ATTENTION;
-  } else {
+  // If estimated completion is more than 10 minutes in the future, definitely normal
+  if (timeRemainingMinutes > 10) {
     return AttentionLevel.NORMAL;
   }
+  
+  // If we've passed the estimated completion time
+  if (timeRemainingMs <= 0) {
+    // How late are we?
+    const minutesLate = Math.abs(timeRemainingMinutes);
+    
+    // More than 7 minutes late = critical
+    if (minutesLate > 7) {
+      return AttentionLevel.CRITICAL;
+    }
+    // 3-7 minutes late = priority
+    else if (minutesLate > 3) {
+      return AttentionLevel.PRIORITY;
+    }
+    // 0-3 minutes late = attention
+    else {
+      return AttentionLevel.ATTENTION;
+    }
+  }
+  
+  // If estimated completion is approaching but not passed
+  // Less than 2 minutes remaining = attention
+  if (timeRemainingMinutes <= 2) {
+    return AttentionLevel.ATTENTION;
+  }
+  
+  // Otherwise normal
+  return AttentionLevel.NORMAL;
 }
 
 /**

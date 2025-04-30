@@ -6,7 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import { OrderSummary, OrderWithItems, OrderItemStatus, OrderStatus } from "@shared/schema";
+import { AttentionLevelBadge } from "@/components/ui/attention-level-badge";
+import { OrderSummary, OrderWithItems, OrderItemStatus, OrderStatus, AttentionLevel } from "@shared/schema";
 
 interface KitchenOrderGridProps {
   orders: OrderSummary[];
@@ -174,9 +175,21 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
     return "bg-white border border-gray-200 shadow-sm";
   };
   
-  // Helper function to determine time status text
+  // Helper function to determine time status text based on attention level
   const getTimeStatusText = (order: OrderSummary) => {
-    if (order.isDelayed) {
+    if (order.attentionLevel) {
+      switch (order.attentionLevel) {
+        case AttentionLevel.CRITICAL:
+          return "Urgent!";
+        case AttentionLevel.PRIORITY:
+          return "Priority";
+        case AttentionLevel.ATTENTION:
+          return "Attention";
+        default:
+          return "On time";
+      }
+    } else if (order.isDelayed) {
+      // Legacy support for isDelayed flag
       return "Delayed!";
     } else if (order.timeElapsed > 15) {
       return "Running late";
@@ -185,14 +198,26 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
     }
   };
   
-  // Helper function to determine time status color
+  // Helper function to determine time status color based on attention level
   const getTimeStatusColor = (order: OrderSummary) => {
-    if (order.isDelayed) {
-      return "text-danger";
+    if (order.attentionLevel) {
+      switch (order.attentionLevel) {
+        case AttentionLevel.CRITICAL:
+          return "text-red-600";
+        case AttentionLevel.PRIORITY:
+          return "text-orange-600";
+        case AttentionLevel.ATTENTION:
+          return "text-amber-600";
+        default:
+          return "text-green-600";
+      }
+    } else if (order.isDelayed) {
+      // Legacy support for isDelayed flag
+      return "text-red-600";
     } else if (order.timeElapsed > 15) {
-      return "text-warning";
+      return "text-amber-600";
     } else {
-      return "text-success";
+      return "text-green-600";
     }
   };
   
