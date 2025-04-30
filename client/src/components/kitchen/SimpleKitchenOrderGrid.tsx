@@ -821,14 +821,17 @@ function OrderCard({
                         )}
                       </div>
 
-                      {/* Customizations display - even more compact */}
+                      {/* Customizations display - more horizontal layout */}
                       {item.customizations && item.customizations.length > 0 && (
-                        <div className="text-xs text-neutral-500">
-                          {item.customizations.map((customization, idx) => (
-                            <span key={idx} className="mr-1">
-                              {customization.options.map(opt => opt.name).join(', ')}
-                            </span>
-                          ))}
+                        <div className="text-xs text-neutral-500 truncate">
+                          <span className="inline-flex items-center">
+                            <span className="font-medium">+</span>
+                            {item.customizations.map((customization, idx) => (
+                              <span key={idx} className="mr-1 max-w-[120px] truncate">
+                                {customization.options.map(opt => opt.name).join(', ')}
+                              </span>
+                            ))}
+                          </span>
                         </div>
                       )}
                     </div>
