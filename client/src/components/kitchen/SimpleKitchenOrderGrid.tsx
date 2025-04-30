@@ -3,7 +3,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Input } from "@/components/ui/input";
 import { OrderSummary, OrderWithItems, OrderItemStatus, OrderStatus } from "@shared/schema";
 
 // Timer to show when to start cooking an item
@@ -199,6 +200,9 @@ interface KitchenOrderGridProps {
 export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [lastProcessedItem, setLastProcessedItem] = useState<string | null>(null);
   
   // Refresh order data every 15 seconds
   useEffect(() => {
@@ -215,27 +219,40 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
   // Toggle item status
   const toggleItemCompletion = async (orderItemId: string, completed: boolean, currentStatus?: string | null) => {
     try {
+      // Remember the last processed item ID to maintain focus
+      setLastProcessedItem(orderItemId);
+      
       let endpoint;
+      let actionTitle;
       
       if (completed) {
         if (currentStatus === OrderItemStatus.COOKING) {
           endpoint = "/plating";
+          actionTitle = "Item Plating";
         } else if (currentStatus === OrderItemStatus.PLATING) {
           endpoint = "/ready";
+          actionTitle = "Item Ready";
         } else if (currentStatus === OrderItemStatus.READY) {
           endpoint = "/deliver";
+          actionTitle = "Item Delivered";
         } else {
           endpoint = "/fire";
+          actionTitle = "Item Fired";
         }
       } else {
+        // Going backwards in the workflow
         if (currentStatus === OrderItemStatus.PLATING) {
-          endpoint = "/fire";
+          endpoint = "/fire";  // Back to COOKING
+          actionTitle = "Item Back to Cooking";
         } else if (currentStatus === OrderItemStatus.READY) {
-          endpoint = "/plating";
+          endpoint = "/plating";  // Back to PLATING
+          actionTitle = "Item Back to Plating";
         } else if (currentStatus === OrderItemStatus.DELIVERED) {
-          endpoint = "/ready";
+          endpoint = "/ready";  // Back to READY
+          actionTitle = "Item Back to Ready";
         } else {
           endpoint = "/fire";
+          actionTitle = "Item Fired";
         }
       }
       
@@ -247,6 +264,15 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
         title: "Item Updated",
         description: "Order item status has been updated.",
       });
+      
+      // After data refreshes, find and scroll to the element again
+      setTimeout(() => {
+        const element = document.querySelector(`[data-item-id="${orderItemId}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 400);
+      
     } catch (error) {
       toast({
         title: "Error",
@@ -296,65 +322,208 @@ export default function KitchenOrderGrid({ orders }: KitchenOrderGridProps) {
     }
   };
   
+  // Filter orders by search term
+  const filteredOrders = searchTerm 
+    ? orders.filter(order => {
+        // Convert search term and order id to lowercase for case-insensitive comparison
+        const search = searchTerm.toLowerCase();
+        const orderId = order.id.toLowerCase();
+        const bayNumber = order.bayNumber?.toString() || '';
+        const orderSummary = `${orderId} ${bayNumber} ${order.status.toLowerCase()}`;
+        
+        return orderSummary.includes(search);
+      })
+    : orders;
+  
+  // Group orders by status for static positioning
+  const ordersByStatus = {
+    new: [] as OrderSummary[],
+    cooking: [] as OrderSummary[],
+    plating: [] as OrderSummary[],
+    ready: [] as OrderSummary[],
+    served: [] as OrderSummary[],
+    closed: [] as OrderSummary[],
+    cancelled: [] as OrderSummary[]
+  };
+  
+  // Sort orders into their status buckets
+  filteredOrders.forEach(order => {
+    const status = order.status.toLowerCase() as keyof typeof ordersByStatus;
+    if (ordersByStatus[status]) {
+      ordersByStatus[status].push(order);
+    } else {
+      // Default to 'new' if for some reason the status doesn't match
+      ordersByStatus.new.push(order);
+    }
+  });
+  
+  // Focus on the last processed item when data refreshes
+  useEffect(() => {
+    if (lastProcessedItem) {
+      const element = document.querySelector(`[data-item-id="${lastProcessedItem}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }, [orders, lastProcessedItem]);
+  
   return (
     <div className="relative">
-      {/* Left/Right scroll buttons */}
-      <button 
-        className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white rounded-full p-2 shadow-md"
-        onClick={() => {
-          const container = document.getElementById('orders-scroll-container');
-          if (container) container.scrollBy({ left: -300, behavior: 'smooth' });
-        }}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
-      <button 
-        className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white rounded-full p-2 shadow-md"
-        onClick={() => {
-          const container = document.getElementById('orders-scroll-container');
-          if (container) container.scrollBy({ left: 300, behavior: 'smooth' });
-        }}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
-      
-      <div 
-        id="orders-scroll-container"
-        className="flex overflow-x-auto pb-4 pt-2 px-10 gap-4 snap-x scrollbar-thin"
-        style={{ scrollbarWidth: 'thin' }}
-      >
-        {orders.length === 0 ? (
-          <div className="flex-shrink-0 min-w-full p-8 text-center text-neutral-500 bg-white rounded-md shadow-md">
-            No orders in this category
+      {/* Search bar */}
+      <div className="mb-4">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <svg className="w-4 h-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+            </svg>
           </div>
-        ) : (
-          [...orders].sort((a, b) => {
-            const statusPriority: Record<string, number> = {
-              [OrderStatus.NEW]: 0,
-              [OrderStatus.COOKING]: 10,
-              [OrderStatus.PLATING]: 20,
-              [OrderStatus.READY]: 30,
-              [OrderStatus.SERVED]: 40,
-              [OrderStatus.CLOSED]: 50,
-              [OrderStatus.CANCELLED]: 60
-            };
-            return (statusPriority[a.status] ?? 100) - (statusPriority[b.status] ?? 100);
-          }).map((order) => (
-            <div key={order.id} className="flex-shrink-0 min-w-[350px] max-w-[400px] snap-start">
+          <Input
+            type="text"
+            placeholder="Search by bay number, order ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+          {searchTerm && (
+            <button 
+              className="absolute inset-y-0 right-0 flex items-center pr-3"
+              onClick={() => setSearchTerm("")}
+            >
+              <svg className="w-4 h-4 text-gray-500 hover:text-gray-700" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+      
+      {/* Orders grid with fixed columns based on status */}
+      <div 
+        ref={containerRef}
+        id="orders-scroll-container"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 overflow-auto pb-6 pt-2"
+      >
+        {/* NEW & COOKING column (leftmost) */}
+        <div className="space-y-4">
+          <h2 className="font-bold text-lg text-primary border-b pb-2">
+            New & Cooking ({ordersByStatus.new.length + ordersByStatus.cooking.length})
+          </h2>
+          
+          {/* NEW orders first */}
+          {ordersByStatus.new.map((order) => (
+            <div key={order.id} className="min-w-full">
               <OrderCard
-                key={order.id}
                 order={order}
                 toggleItemCompletion={toggleItemCompletion}
                 markOrderAsReady={markOrderAsReady}
                 closeOrder={closeOrder}
               />
             </div>
-          ))
-        )}
+          ))}
+          
+          {/* Then COOKING orders */}
+          {ordersByStatus.cooking.map((order) => (
+            <div key={order.id} className="min-w-full">
+              <OrderCard
+                order={order}
+                toggleItemCompletion={toggleItemCompletion}
+                markOrderAsReady={markOrderAsReady}
+                closeOrder={closeOrder}
+              />
+            </div>
+          ))}
+          
+          {ordersByStatus.new.length === 0 && ordersByStatus.cooking.length === 0 && (
+            <div className="bg-white p-4 rounded-md text-center text-gray-500 border">
+              No new or cooking orders
+            </div>
+          )}
+        </div>
+        
+        {/* PLATING column (second from right) */}
+        <div className="space-y-4">
+          <h2 className="font-bold text-lg text-purple-700 border-b pb-2">
+            Plating ({ordersByStatus.plating.length})
+          </h2>
+          
+          {ordersByStatus.plating.map((order) => (
+            <div key={order.id} className="min-w-full">
+              <OrderCard
+                order={order}
+                toggleItemCompletion={toggleItemCompletion}
+                markOrderAsReady={markOrderAsReady}
+                closeOrder={closeOrder}
+              />
+            </div>
+          ))}
+          
+          {ordersByStatus.plating.length === 0 && (
+            <div className="bg-white p-4 rounded-md text-center text-gray-500 border">
+              No orders being plated
+            </div>
+          )}
+        </div>
+        
+        {/* READY column (rightmost) */}
+        <div className="space-y-4">
+          <h2 className="font-bold text-lg text-green-700 border-b pb-2">
+            Ready ({ordersByStatus.ready.length})
+          </h2>
+          
+          {ordersByStatus.ready.map((order) => (
+            <div key={order.id} className="min-w-full">
+              <OrderCard
+                order={order}
+                toggleItemCompletion={toggleItemCompletion}
+                markOrderAsReady={markOrderAsReady}
+                closeOrder={closeOrder}
+              />
+            </div>
+          ))}
+          
+          {ordersByStatus.ready.length === 0 && (
+            <div className="bg-white p-4 rounded-md text-center text-gray-500 border">
+              No orders ready to serve
+            </div>
+          )}
+        </div>
+        
+        {/* SERVED & CLOSED column */}
+        <div className="space-y-4">
+          <h2 className="font-bold text-lg text-blue-700 border-b pb-2">
+            Served & Closed ({ordersByStatus.served.length + ordersByStatus.closed.length})
+          </h2>
+          
+          {/* SERVED orders first */}
+          {ordersByStatus.served.map((order) => (
+            <div key={order.id} className="min-w-full">
+              <OrderCard
+                order={order}
+                toggleItemCompletion={toggleItemCompletion}
+                markOrderAsReady={markOrderAsReady}
+                closeOrder={closeOrder}
+              />
+            </div>
+          ))}
+          
+          {/* Then CLOSED orders */}
+          {ordersByStatus.closed.map((order) => (
+            <div key={order.id} className="min-w-full">
+              <OrderCard
+                order={order}
+                toggleItemCompletion={toggleItemCompletion}
+                markOrderAsReady={markOrderAsReady}
+                closeOrder={closeOrder}
+              />
+            </div>
+          ))}
+          
+          {ordersByStatus.served.length === 0 && ordersByStatus.closed.length === 0 && (
+            <div className="bg-white p-4 rounded-md text-center text-gray-500 border">
+              No served or closed orders
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
