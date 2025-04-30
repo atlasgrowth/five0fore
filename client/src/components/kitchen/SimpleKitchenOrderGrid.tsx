@@ -6,6 +6,85 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { OrderSummary, OrderWithItems, OrderItemStatus, OrderStatus } from "@shared/schema";
 
+// Timer to show when to start cooking an item
+function StartTimer({ 
+  orderCreatedAt, 
+  cookSeconds, 
+  longestCookItem 
+}: { 
+  orderCreatedAt: string, 
+  cookSeconds: number, 
+  longestCookItem: boolean 
+}) {
+  const [timeToStart, setTimeToStart] = useState<number | null>(null);
+  const [isTimeToStart, setIsTimeToStart] = useState<boolean>(false);
+  
+  useEffect(() => {
+    const calculateStartTime = () => {
+      // If this is the longest cook item, it should start right away
+      if (longestCookItem) {
+        setIsTimeToStart(true);
+        setTimeToStart(0);
+        return;
+      }
+      
+      // Otherwise, calculate when to start this item
+      const orderTime = new Date(orderCreatedAt).getTime();
+      const currentTime = new Date().getTime();
+      const elapsedMs = currentTime - orderTime;
+      
+      // Time to wait before starting this item
+      // This will be (longest cook time - this item's cook time)
+      // For simplicity, we're using a fixed buffer of 5 minutes (300 seconds) to represent the longest cook time
+      const longestItemTime = 300; // 5 minutes
+      const waitTimeMs = (longestItemTime - cookSeconds) * 1000;
+      
+      // If it's already time to start (elapsed time > wait time)
+      if (elapsedMs >= waitTimeMs) {
+        setIsTimeToStart(true);
+        setTimeToStart(0);
+      } else {
+        // Calculate seconds remaining until it's time to start
+        const remainingMs = waitTimeMs - elapsedMs;
+        setTimeToStart(Math.ceil(remainingMs / 1000));
+        setIsTimeToStart(false);
+      }
+    };
+    
+    calculateStartTime();
+    const timer = setInterval(calculateStartTime, 1000);
+    
+    return () => clearInterval(timer);
+  }, [orderCreatedAt, cookSeconds, longestCookItem]);
+  
+  // Format time in minutes and seconds
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+  
+  if (isTimeToStart) {
+    return (
+      <span className="ml-2 text-xs font-medium bg-red-100 text-red-800 px-2 py-0.5 rounded-full flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Start now!
+      </span>
+    );
+  }
+  
+  return (
+    <span className="ml-2 text-xs font-medium bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full flex items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      Start in {timeToStart !== null ? formatTime(timeToStart) : '--:--'}
+    </span>
+  );
+}
+
 // Simple cooking timer component
 function CookingTimer({ firedAt, cookSeconds }: { firedAt: string, cookSeconds: number }) {
   const [timeLeft, setTimeLeft] = useState<number>(0);
@@ -373,7 +452,7 @@ function OrderCard({
                       <div className="flex items-center">
                         <span className="text-sm font-medium">{item.quantity}x {item.menuItem?.name}</span>
                         
-                        {/* Status labels with appropriate indicators */}
+                        {/* Status labels with appropriate indicators and action buttons */}
                         {item.status === OrderItemStatus.COOKING && item.firedAt && (
                           <div className="ml-2 flex items-center">
                             <span className="text-xs font-medium bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">
@@ -383,25 +462,71 @@ function OrderCard({
                               firedAt={item.firedAt} 
                               cookSeconds={item.cookSeconds || item.menuItem?.prep_seconds || 300}
                             />
+                            <button 
+                              onClick={() => toggleItemCompletion(item.id, true, item.status)}
+                              className="ml-2 p-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-full flex items-center"
+                              title="Move to plating"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </button>
                           </div>
                         )}
                         
                         {item.status === OrderItemStatus.PLATING && (
-                          <span className="ml-2 text-xs font-medium bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">
-                            Plating
-                          </span>
+                          <div className="ml-2 flex items-center">
+                            <span className="text-xs font-medium bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">
+                              Plating
+                            </span>
+                            <button 
+                              onClick={() => toggleItemCompletion(item.id, true, item.status)}
+                              className="ml-2 p-1 text-xs bg-green-100 hover:bg-green-200 text-green-800 rounded-full flex items-center"
+                              title="Mark as ready"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </div>
                         )}
                         
                         {item.status === OrderItemStatus.READY && (
-                          <span className="ml-2 text-xs font-medium bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
-                            Ready
-                          </span>
+                          <div className="ml-2 flex items-center">
+                            <span className="text-xs font-medium bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                              Ready
+                            </span>
+                            <button 
+                              onClick={() => toggleItemCompletion(item.id, true, item.status)}
+                              className="ml-2 p-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-full flex items-center"
+                              title="Mark as delivered"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </div>
                         )}
                         
                         {item.status === OrderItemStatus.DELIVERED && (
                           <span className="ml-2 text-xs font-medium bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
                             Delivered
                           </span>
+                        )}
+                        
+                        {/* Pending items (show when to start cooking) */}
+                        {!item.status && item.menuItem?.prep_seconds && (
+                          <StartTimer 
+                            orderCreatedAt={order.createdAt}
+                            cookSeconds={item.menuItem.prep_seconds}
+                            longestCookItem={
+                              orderDetails?.items?.reduce((longest, curr) => {
+                                const currCookTime = curr.cookSeconds || curr.menuItem?.prep_seconds || 0;
+                                const longestCookTime = longest.cookSeconds || longest.menuItem?.prep_seconds || 0;
+                                return currCookTime > longestCookTime ? curr : longest;
+                              }, item) === item
+                            }
+                          />
                         )}
                       </div>
                       
