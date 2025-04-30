@@ -169,7 +169,7 @@ export default function ServerView() {
     console.log(`Bay ${bayId} has ${activeOrders.length} active orders`);
     
     // Get bay from cache to check its status
-    const bay = bays.find(b => b.id === bayId);
+    const bay = Array.isArray(bays) ? bays.find((b: any) => b.id === bayId) : null;
     console.log(`Bay ${bayId} status:`, bay?.status);
     
     // Check bay status - if not empty/available, assume it has active orders

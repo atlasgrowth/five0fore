@@ -202,23 +202,41 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateBayStatus(id: number, status: string): Promise<Bay | undefined> {
-    // Import WebSocket functionality dynamically to avoid circular imports
-    const { broadcastUpdate } = await import('./ws');
-    
-    // Update the bay status in the database
-    const [updatedBay] = await db
-      .update(bays)
-      .set({ status })
-      .where(eq(bays.id, id))
-      .returning();
-    
-    if (updatedBay) {
+    try {
+      // Import WebSocket functionality dynamically to avoid circular imports
+      const { broadcastUpdate } = await import('./ws');
+      
+      // Update the bay status in the database
+      const [updatedBay] = await db
+        .update(bays)
+        .set({ status })
+        .where(eq(bays.id, id))
+        .returning();
+      
+      if (!updatedBay) {
+        console.warn(`Failed to update bay ${id} status to ${status}`);
+        return undefined;
+      }
+      
+      // Get any active orders for this bay to include in the update message
+      const bayOrders = await this.getOrdersByBayId(id);
+      
+      // Format the message according to BayUpdatedMessage type
+      const bayUpdateMessage = {
+        bay: toBayDTO(updatedBay),
+        orders: bayOrders.map(order => toOrderDTO(order)),
+        status: updatedBay.status
+      };
+      
       // Broadcast the bay update with its new status to all clients
-      broadcastUpdate('bay_updated', { bay: toBayDTO(updatedBay) });
-      console.log(`Broadcasted bay status update: Bay ${id} -> ${status}`);
+      console.log(`Broadcasting bay status update: Bay ${id} -> ${status}`);
+      broadcastUpdate('bay_updated', bayUpdateMessage);
+      
+      return updatedBay;
+    } catch (error) {
+      console.error(`Error updating bay ${id} status to ${status}:`, error);
+      return undefined;
     }
-    
-    return updatedBay || undefined;
   }
 
   // Orders
